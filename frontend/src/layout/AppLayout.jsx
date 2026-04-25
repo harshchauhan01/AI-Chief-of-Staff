@@ -6,8 +6,8 @@ const navItems = [
   { to: '/goals', label: 'Goals' },
   { to: '/tasks', label: 'Tasks' },
   { to: '/routine', label: 'Routine Tracker' },
-  { to: '/routine-progress', label: 'Routine Progress' },
   { to: '/daily-plan', label: 'Daily Plan' },
+  { to: '/decision-helper', label: 'Decision Helper' },
 ]
 
 function AppLayout() {

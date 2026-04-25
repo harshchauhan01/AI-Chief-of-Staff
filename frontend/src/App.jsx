@@ -3,6 +3,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import AppLayout from './layout/AppLayout'
 import DashboardPage from './pages/DashboardPage'
 import DailyPlanPage from './pages/DailyPlanPage'
+import DecisionHelperPage from './pages/DecisionHelperPage'
 import GoalsPage from './pages/GoalsPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
@@ -23,6 +24,7 @@ function App() {
           <Route path="/routine" element={<RoutineTrackerPage />} />
           <Route path="/routine-progress" element={<RoutineProgressPage />} />
           <Route path="/daily-plan" element={<DailyPlanPage />} />
+          <Route path="/decision-helper" element={<DecisionHelperPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

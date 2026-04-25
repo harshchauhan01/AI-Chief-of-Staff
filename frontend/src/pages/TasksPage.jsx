@@ -150,6 +150,32 @@ function TasksPage() {
     <section className="panel">
       <h2>Tasks</h2>
 
+      <div className="info-card">
+        <h3>Scoring Guide</h3>
+        <p>
+          <strong>Impact</strong> means business value. <strong>Urgency</strong> means time pressure.
+          Both use a 1 to 5 scale.
+        </p>
+        <div className="score-legend-grid">
+          <div>
+            <h4>Impact (1-5)</h4>
+            <p>1 = Very low value</p>
+            <p>3 = Moderate value</p>
+            <p>5 = High strategic value</p>
+          </div>
+          <div>
+            <h4>Urgency (1-5)</h4>
+            <p>1 = No deadline pressure</p>
+            <p>3 = Should be done soon</p>
+            <p>5 = Immediate deadline / blocking</p>
+          </div>
+        </div>
+        <p className="muted-text">
+          Priority score is higher when impact and urgency are higher, and when effort (estimated minutes)
+          is lower.
+        </p>
+      </div>
+
       <div className="stat-grid task-stats">
         <div className="stat-card">
           <h3>To Do</h3>

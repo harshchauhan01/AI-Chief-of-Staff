@@ -47,6 +47,8 @@ function RoutineTrackerPage() {
   const [routineTime, setRoutineTime] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [taskPendingDelete, setTaskPendingDelete] = useState(null)
   const [error, setError] = useState('')
 
   const fetchMatrix = useCallback(async () => {
@@ -109,14 +111,29 @@ function RoutineTrackerPage() {
 
   const deleteRoutineTask = async (taskId) => {
     try {
+      setDeleting(true)
       await api.delete(`/tasks/routines/${taskId}/`)
       setMatrix((current) => ({
         ...current,
         tasks: current.tasks.filter((task) => task.id !== taskId),
       }))
+      setTaskPendingDelete(null)
     } catch {
       setError('Unable to delete routine task.')
+    } finally {
+      setDeleting(false)
     }
+  }
+
+  const requestDeleteRoutineTask = (task) => {
+    setTaskPendingDelete(task)
+  }
+
+  const cancelDeleteRoutineTask = () => {
+    if (deleting) {
+      return
+    }
+    setTaskPendingDelete(null)
   }
 
   const moveRoutineTask = async (taskId, direction) => {
@@ -219,7 +236,7 @@ function RoutineTrackerPage() {
                   <strong>{task.title}</strong>
                   {task.routine_time && <span>{formatRoutineTime(task.routine_time)}</span>}
                 </div>
-                <button type="button" className="secondary-btn danger-btn" onClick={() => deleteRoutineTask(task.id)}>
+                <button type="button" className="secondary-btn danger-btn" onClick={() => requestDeleteRoutineTask(task)}>
                   Remove
                 </button>
               </li>
@@ -288,6 +305,36 @@ function RoutineTrackerPage() {
           </div>
         </div>
       </div>
+
+      {taskPendingDelete && (
+        <div className="confirm-modal-backdrop" role="presentation" onClick={cancelDeleteRoutineTask}>
+          <div
+            className="confirm-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="routine-delete-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h3 id="routine-delete-title">Delete routine task?</h3>
+            <p>
+              Remove <strong>{taskPendingDelete.title}</strong> from your routine tracker?
+            </p>
+            <div className="confirm-modal-actions">
+              <button type="button" className="secondary-btn" onClick={cancelDeleteRoutineTask} disabled={deleting}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="secondary-btn danger-btn"
+                onClick={() => deleteRoutineTask(taskPendingDelete.id)}
+                disabled={deleting}
+              >
+                {deleting ? 'Removing...' : 'Remove'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   )
 }

@@ -2,6 +2,14 @@ import { useEffect, useMemo, useState } from 'react'
 import api from '../api/client'
 
 const emptyPlan = { summary: '', top_tasks: [] }
+const emptyProgress = {
+  start: '',
+  end: '',
+  overall_rate: 0,
+  best_day: null,
+  daily: [],
+  tasks: [],
+}
 
 const displayScore = (task) => {
   if (typeof task.priority_score === 'number') {
@@ -16,8 +24,24 @@ function DashboardPage() {
   const [tasks, setTasks] = useState([])
   const [goals, setGoals] = useState([])
   const [plan, setPlan] = useState(emptyPlan)
+  const [progress, setProgress] = useState(emptyProgress)
+  const [progressRange, setProgressRange] = useState(30)
   const [loading, setLoading] = useState(true)
+  const [progressLoading, setProgressLoading] = useState(true)
   const [error, setError] = useState('')
+
+  const loadProgress = async (rangeDays) => {
+    setProgressLoading(true)
+
+    try {
+      const { data } = await api.get('/tasks/routines/progress/', { params: { days: rangeDays } })
+      setProgress(data)
+    } catch {
+      setProgress(emptyProgress)
+    } finally {
+      setProgressLoading(false)
+    }
+  }
 
   useEffect(() => {
     let mounted = true
@@ -60,11 +84,12 @@ function DashboardPage() {
     }
 
     loadDashboard()
+    void loadProgress(progressRange)
 
     return () => {
       mounted = false
     }
-  }, [])
+  }, [progressRange])
 
   const stats = useMemo(() => {
     const openTasks = tasks.filter((task) => task.status !== 'done').length
@@ -74,6 +99,29 @@ function DashboardPage() {
 
     return { openTasks, activeGoals, completionRate }
   }, [goals, tasks])
+
+  const progressTrendPoints = useMemo(() => {
+    if (!progress.daily.length) {
+      return ''
+    }
+
+    const width = 720
+    const height = 210
+    const step = progress.daily.length > 1 ? width / (progress.daily.length - 1) : width
+
+    return progress.daily
+      .map((item, index) => {
+        const x = index * step
+        const y = height - (item.rate / 100) * height
+        return `${x},${y}`
+      })
+      .join(' ')
+  }, [progress.daily])
+
+  const formatShortDate = (isoDay) => {
+    const date = new Date(`${isoDay}T00:00:00`)
+    return new Intl.DateTimeFormat('en-US', { month: 'short', day: '2-digit' }).format(date)
+  }
 
   return (
     <section className="panel">
@@ -132,6 +180,88 @@ function DashboardPage() {
           </ul>
         </article>
       </div>
+
+      <section className="dashboard-card dashboard-progress-card">
+        <div className="routine-progress-head dashboard-progress-head">
+          <div>
+            <h3>Routine Progress</h3>
+            <p>Charts are shown directly on the dashboard below today at a glance.</p>
+          </div>
+          <div className="pill-group">
+            {[14, 30, 90].map((days) => (
+              <button
+                key={days}
+                type="button"
+                className={progressRange === days ? 'pill-btn active' : 'pill-btn'}
+                onClick={() => setProgressRange(days)}
+              >
+                Last {days} days
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="routine-progress-stats dashboard-progress-stats">
+          <article className="stat-card">
+            <h3>Overall Completion</h3>
+            <p>{progressLoading ? '--' : `${Math.round(progress.overall_rate)}%`}</p>
+          </article>
+          <article className="stat-card">
+            <h3>Best Day</h3>
+            <p>{progressLoading || !progress.best_day ? '--' : `${formatShortDate(progress.best_day.day)} (${Math.round(progress.best_day.rate)}%)`}</p>
+          </article>
+          <article className="stat-card">
+            <h3>Tracking Range</h3>
+            <p>{progressLoading ? '--' : `${progress.start} to ${progress.end}`}</p>
+          </article>
+        </div>
+
+        <div className="routine-progress-grid dashboard-progress-grid">
+          <article className="progress-card">
+            <h3>Daily Completion Trend</h3>
+            {progressLoading && <p>Loading chart...</p>}
+            {!progressLoading && progress.daily.length === 0 && <p>No routine data yet.</p>}
+            {!progressLoading && progress.daily.length > 0 && (
+              <div className="trend-chart">
+                <svg viewBox="0 0 720 210" role="img" aria-label="Daily completion trend line chart">
+                  <line x1="0" y1="210" x2="720" y2="210" stroke="#d7d1c4" strokeWidth="1" />
+                  <line x1="0" y1="105" x2="720" y2="105" stroke="#e5dfd4" strokeDasharray="5 5" strokeWidth="1" />
+                  <line x1="0" y1="0" x2="720" y2="0" stroke="#e5dfd4" strokeDasharray="5 5" strokeWidth="1" />
+                  <polyline points={progressTrendPoints} fill="none" stroke="#0f766e" strokeWidth="3" strokeLinecap="round" />
+                </svg>
+                <div className="trend-labels">
+                  <span>{formatShortDate(progress.daily[0].day)}</span>
+                  <span>{formatShortDate(progress.daily[progress.daily.length - 1].day)}</span>
+                </div>
+              </div>
+            )}
+          </article>
+
+          <article className="progress-card">
+            <h3>Task Completion Rates</h3>
+            {progressLoading && <p>Loading chart...</p>}
+            {!progressLoading && progress.tasks.length === 0 && <p>Add routine tasks to see insights.</p>}
+            {!progressLoading && progress.tasks.length > 0 && (
+              <ul className="task-progress-bars">
+                {progress.tasks.map((task) => (
+                  <li key={task.id}>
+                    <div className="task-progress-head">
+                      <strong>{task.title}</strong>
+                      <span>{Math.round(task.completion_rate)}%</span>
+                    </div>
+                    <div className="task-progress-track">
+                      <div className="task-progress-fill" style={{ width: `${task.completion_rate}%` }} />
+                    </div>
+                    <small>
+                      {task.done_days}/{task.total_days} days complete | streak {task.current_streak}
+                    </small>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </article>
+        </div>
+      </section>
     </section>
   )
 }
