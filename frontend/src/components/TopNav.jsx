@@ -1,15 +1,8 @@
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 
-function TopNav() {
+function TopNav({ showMenuToggle = false, isMenuOpen = false, onMenuToggle = () => {} }) {
   const location = useLocation()
-  const navigate = useNavigate()
   const isAuthed = Boolean(localStorage.getItem('accessToken'))
-
-  const logout = () => {
-    localStorage.removeItem('accessToken')
-    localStorage.removeItem('refreshToken')
-    navigate('/login')
-  }
 
   return (
     <header className="top-nav">
@@ -17,20 +10,29 @@ function TopNav() {
         <div className="brand-dot" aria-hidden="true" />
         <div className="brand">Chief of Staff AI</div>
       </div>
-      <nav className="top-actions">
-        {isAuthed && (
-          <Link to="/" className={location.pathname === '/' ? 'top-link active' : 'top-link'}>
-            Overview
+      {!isAuthed && (
+        <nav className="top-actions">
+          <Link to="/login" className={location.pathname === '/login' ? 'top-link active' : 'top-link'}>
+            Login
           </Link>
-        )}
-        {!isAuthed && <Link to="/login" className={location.pathname === '/login' ? 'top-link active' : 'top-link'}>Login</Link>}
-        {!isAuthed && <Link to="/register" className={location.pathname === '/register' ? 'top-link active' : 'top-link'}>Register</Link>}
-        {isAuthed && (
-          <button type="button" className="top-link danger" onClick={logout}>
-            Logout
-          </button>
-        )}
-      </nav>
+          <Link to="/register" className={location.pathname === '/register' ? 'top-link active' : 'top-link'}>
+            Register
+          </Link>
+        </nav>
+      )}
+      {showMenuToggle && (
+        <button
+          type="button"
+          className="mobile-nav-toggle"
+          aria-label={isMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+          aria-expanded={isMenuOpen}
+          onClick={onMenuToggle}
+        >
+          <span className="bar" />
+          <span className="bar" />
+          <span className="bar" />
+        </button>
+      )}
     </header>
   )
 }

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="96" y1="72" x2="416" y2="440" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1f2937" />
+      <stop offset="1" stop-color="#0f172a" />
+    </linearGradient>
+    <linearGradient id="accent" x1="144" y1="340" x2="368" y2="472" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7c3aed" />
+      <stop offset="1" stop-color="#22d3ee" />
+    </linearGradient>
+    <filter id="softGlow" x="92" y="92" width="328" height="328" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="18" />
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)" />
+  <circle cx="256" cy="206" r="112" fill="#0f766e" opacity="0.2" filter="url(#softGlow)" />
+  <path d="M160 146c0-13.255 10.745-24 24-24h144c13.255 0 24 10.745 24 24v104c0 13.255-10.745 24-24 24H184c-13.255 0-24-10.745-24-24V146Z" fill="#ffffff" opacity="0.12" />
+  <path d="M140 174c0-11.046 8.954-20 20-20h192c11.046 0 20 8.954 20 20v54c0 11.046-8.954 20-20 20H160c-11.046 0-20-8.954-20-20v-54Z" fill="url(#accent)" opacity="0.96" />
+  <path d="M171 195h170M171 218h118" stroke="#ffffff" stroke-width="18" stroke-linecap="round" opacity="0.95" />
+  <rect x="182" y="282" width="148" height="88" rx="22" fill="#f8fafc" opacity="0.98" />
+  <path d="M210 320h92" stroke="#0f766e" stroke-width="18" stroke-linecap="round" opacity="0.95" />
+</svg>

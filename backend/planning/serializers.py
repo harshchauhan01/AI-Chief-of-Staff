@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import NightReview, NightReviewItem
+from .models import NightReview, NightReviewItem, InboxItem
 
 
 class NightReviewItemSerializer(serializers.ModelSerializer):
@@ -17,3 +17,20 @@ class NightReviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = NightReview
         fields = ["day", "wins", "energy", "items", "updated_at"]
+
+
+class InboxItemSerializer(serializers.ModelSerializer):
+	class Meta:
+		model = InboxItem
+		fields = [
+			"id",
+			"content",
+			"tags",
+			"auto_tags",
+			"is_archived",
+			"converted_to_task",
+			"created_at",
+			"updated_at",
+		]
+		read_only_fields = ["id", "auto_tags", "created_at", "updated_at"]
+

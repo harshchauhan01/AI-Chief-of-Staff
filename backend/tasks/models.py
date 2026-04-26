@@ -64,4 +64,26 @@ class RoutineCheck(models.Model):
 	def __str__(self):
 		return f"{self.routine_task_id}:{self.day}:{self.done}"
 
-# Create your models here.
+
+class TimeBlock(models.Model):
+	"""Smart Time Blocking - Schedule tasks into calendar time slots"""
+	user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="time_blocks")
+	task = models.ForeignKey(Task, null=True, blank=True, on_delete=models.SET_NULL, related_name="time_blocks")
+	title = models.CharField(max_length=255)
+	description = models.TextField(blank=True)
+	scheduled_date = models.DateField(db_index=True)
+	start_time = models.TimeField()
+	end_time = models.TimeField()
+	is_flexible = models.BooleanField(default=False, help_text="Can be rescheduled if conflicts arise")
+	color = models.CharField(max_length=7, default="#3B82F6", help_text="Hex color code for calendar display")
+	created_at = models.DateTimeField(auto_now_add=True)
+	updated_at = models.DateTimeField(auto_now=True)
+
+	class Meta:
+		ordering = ["scheduled_date", "start_time"]
+		indexes = [
+			models.Index(fields=["user", "scheduled_date"]),
+		]
+
+	def __str__(self):
+		return f"{self.title} - {self.scheduled_date} {self.start_time}-{self.end_time}"

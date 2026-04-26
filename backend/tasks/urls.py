@@ -1,10 +1,11 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 
-from .views import RoutineTaskViewSet, TaskViewSet
+from .views import RoutineTaskViewSet, TaskViewSet, TimeBlockViewSet
 
 router = DefaultRouter()
 router.register(r"", TaskViewSet, basename="task")
+router.register(r"time-blocks", TimeBlockViewSet, basename="time-block")
 
 routine_list = RoutineTaskViewSet.as_view({"get": "list", "post": "create"})
 routine_detail = RoutineTaskViewSet.as_view({"delete": "destroy"})

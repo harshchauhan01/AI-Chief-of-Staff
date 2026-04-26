@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     'goals',
     'tasks',
     'planning',
+    'insights',
     'ai_assistant',
 ]
 

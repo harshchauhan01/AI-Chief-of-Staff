@@ -5,8 +5,8 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from .models import RoutineCheck, RoutineTask, Task
-from .serializers import RoutineCheckSerializer, RoutineTaskSerializer, TaskSerializer
+from .models import RoutineCheck, RoutineTask, Task, TimeBlock
+from .serializers import RoutineCheckSerializer, RoutineTaskSerializer, TaskSerializer, TimeBlockSerializer
 
 
 class TaskViewSet(viewsets.ModelViewSet):
@@ -231,5 +231,75 @@ class RoutineTaskViewSet(viewsets.ModelViewSet):
 		check_obj.save(update_fields=["done", "updated_at"])
 
 		return Response(RoutineCheckSerializer(check_obj).data)
+
+
+class TimeBlockViewSet(viewsets.ModelViewSet):
+	"""Time blocking for smart scheduling - organize tasks into calendar time slots"""
+	serializer_class = TimeBlockSerializer
+
+	def get_queryset(self):
+		queryset = TimeBlock.objects.filter(user=self.request.user)
+		scheduled_date = self.request.query_params.get("scheduled_date")
+		if scheduled_date:
+			queryset = queryset.filter(scheduled_date=scheduled_date)
+		return queryset.order_by("scheduled_date", "start_time")
+
+	def perform_create(self, serializer):
+		serializer.save(user=self.request.user)
+
+	@action(detail=False, methods=["get"], url_path="calendar")
+	def calendar(self, request):
+		"""Get time blocks for a date range for calendar view"""
+		start_text = request.query_params.get("start")
+		end_text = request.query_params.get("end")
+
+		if not start_text or not end_text:
+			return Response({"detail": "start and end dates are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+		try:
+			start_date = date.fromisoformat(start_text)
+			end_date = date.fromisoformat(end_text)
+		except ValueError:
+			return Response({"detail": "Dates must be YYYY-MM-DD format."}, status=status.HTTP_400_BAD_REQUEST)
+
+		blocks = self.get_queryset().filter(scheduled_date__gte=start_date, scheduled_date__lte=end_date)
+		serializer = self.get_serializer(blocks, many=True)
+		return Response(serializer.data)
+
+	@action(detail=False, methods=["post"], url_path="check-conflicts")
+	def check_conflicts(self, request):
+		"""Check if a new time block conflicts with existing ones"""
+		scheduled_date_text = request.data.get("scheduled_date")
+		start_time_text = request.data.get("start_time")
+		end_time_text = request.data.get("end_time")
+		exclude_id = request.data.get("exclude_id")
+
+		if not all([scheduled_date_text, start_time_text, end_time_text]):
+			return Response({"detail": "scheduled_date, start_time, and end_time are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+		from datetime import time
+		try:
+			scheduled_date = date.fromisoformat(scheduled_date_text)
+			start_time = time.fromisoformat(start_time_text)
+			end_time = time.fromisoformat(end_time_text)
+		except ValueError:
+			return Response({"detail": "Invalid date or time format."}, status=status.HTTP_400_BAD_REQUEST)
+
+		conflicts = self.get_queryset().filter(
+			scheduled_date=scheduled_date,
+			start_time__lt=end_time,
+			end_time__gt=start_time,
+		)
+
+		if exclude_id:
+			conflicts = conflicts.exclude(id=exclude_id)
+
+		if conflicts.exists():
+			return Response({
+				"has_conflicts": True,
+				"conflicts": TimeBlockSerializer(conflicts, many=True).data
+			})
+
+		return Response({"has_conflicts": False, "conflicts": []})
 
 # Create your views here.

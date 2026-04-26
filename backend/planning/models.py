@@ -43,4 +43,23 @@ class NightReviewItem(models.Model):
 	def __str__(self):
 		return f"{self.review_id}:{self.task_id}:{self.outcome}"
 
-# Create your models here.
+
+class InboxItem(models.Model):
+	"""Quick Capture - Fast inbox for ideas, notes, and random thoughts with auto-tagging"""
+	user = models.ForeignKey("auth.User", on_delete=models.CASCADE, related_name="inbox_items")
+	content = models.TextField()
+	tags = models.CharField(max_length=500, blank=True, help_text="Comma-separated tags")
+	auto_tags = models.CharField(max_length=500, blank=True, help_text="Auto-detected tags based on content")
+	is_archived = models.BooleanField(default=False)
+	converted_to_task = models.ForeignKey("tasks.Task", null=True, blank=True, on_delete=models.SET_NULL, related_name="inbox_source")
+	created_at = models.DateTimeField(auto_now_add=True)
+	updated_at = models.DateTimeField(auto_now=True)
+
+	class Meta:
+		ordering = ["-created_at"]
+		indexes = [
+			models.Index(fields=["user", "is_archived"]),
+		]
+
+	def __str__(self):
+		return f"Inbox ({self.user_id}): {self.content[:50]}"

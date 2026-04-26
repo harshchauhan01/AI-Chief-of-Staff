@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import RoutineCheck, RoutineTask, Task
+from .models import RoutineCheck, RoutineTask, Task, TimeBlock
 
 
 class TaskSerializer(serializers.ModelSerializer):
@@ -27,6 +27,29 @@ class TaskSerializer(serializers.ModelSerializer):
     def get_priority_score(self, obj):
         effort_factor = 1 / max(obj.estimated_minutes or 30, 1)
         return round((obj.urgency_score * 0.45) + (obj.impact_score * 0.45) + (effort_factor * 300 * 0.10), 2)
+
+
+class TimeBlockSerializer(serializers.ModelSerializer):
+	task_title = serializers.CharField(source="task.title", read_only=True, allow_null=True)
+
+	class Meta:
+		model = TimeBlock
+		fields = [
+			"id",
+			"task",
+			"task_title",
+			"title",
+			"description",
+			"scheduled_date",
+			"start_time",
+			"end_time",
+			"is_flexible",
+			"color",
+			"created_at",
+			"updated_at",
+		]
+		read_only_fields = ["id", "created_at", "updated_at"]
+
 
 
 class RoutineCheckSerializer(serializers.ModelSerializer):

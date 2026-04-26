@@ -4,9 +4,10 @@ from django.db.models import Q
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework import viewsets, status
 
-from .models import NightReview, NightReviewItem
-from .serializers import NightReviewSerializer
+from .models import NightReview, NightReviewItem, InboxItem
+from .serializers import NightReviewSerializer, InboxItemSerializer
 from tasks.models import RoutineCheck, RoutineTask, Task
 from tasks.serializers import TaskSerializer
 
@@ -309,5 +310,61 @@ class NightReviewView(APIView):
 
 		review = NightReview.objects.filter(id=review.id).prefetch_related("items__task").first()
 		return Response({"saved": True, "review": NightReviewSerializer(review).data})
+
+
+class InboxViewSet(viewsets.ModelViewSet):
+	"""Quick Capture - Fast inbox for ideas and notes with auto-tagging"""
+	serializer_class = InboxItemSerializer
+	permission_classes = [IsAuthenticated]
+
+	def get_queryset(self):
+		queryset = InboxItem.objects.filter(user=self.request.user)
+		is_archived = self.request.query_params.get("is_archived")
+		if is_archived is not None:
+			is_archived = is_archived.lower() in {"true", "1", "yes"}
+			queryset = queryset.filter(is_archived=is_archived)
+		return queryset.order_by("-created_at")
+
+	def perform_create(self, serializer):
+		# Auto-detect tags based on keywords
+		content = serializer.validated_data.get("content", "").lower()
+		auto_tags = []
+		
+		keyword_map = {
+			"meeting": ["meeting", "call", "sync", "standup"],
+			"urgent": ["urgent", "asap", "priority", "critical", "important"],
+			"idea": ["idea", "thought", "concept", "inspiration"],
+			"bug": ["bug", "issue", "error", "broken", "crash"],
+			"feature": ["feature", "feature request", "enhancement"],
+			"question": ["question", "help", "how to", "how do"],
+		}
+		
+		for tag, keywords in keyword_map.items():
+			if any(keyword in content for keyword in keywords):
+				auto_tags.append(tag)
+		
+		auto_tags_str = ", ".join(auto_tags)
+		serializer.save(user=self.request.user, auto_tags=auto_tags_str)
+
+	def perform_update(self, serializer):
+		# Recalculate auto tags on update
+		content = serializer.validated_data.get("content", "").lower()
+		auto_tags = []
+		
+		keyword_map = {
+			"meeting": ["meeting", "call", "sync", "standup"],
+			"urgent": ["urgent", "asap", "priority", "critical", "important"],
+			"idea": ["idea", "thought", "concept", "inspiration"],
+			"bug": ["bug", "issue", "error", "broken", "crash"],
+			"feature": ["feature", "feature request", "enhancement"],
+			"question": ["question", "help", "how to", "how do"],
+		}
+		
+		for tag, keywords in keyword_map.items():
+			if any(keyword in content for keyword in keywords):
+				auto_tags.append(tag)
+		
+		auto_tags_str = ", ".join(auto_tags)
+		serializer.save(auto_tags=auto_tags_str)
 
 # Create your views here.
