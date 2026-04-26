@@ -1,5 +1,5 @@
-const CACHE_NAME = 'orion-shell-v1'
-const APP_SHELL = ['/', '/manifest.webmanifest', '/app-icon.svg', '/favicon.svg']
+const CACHE_NAME = 'orion-shell-v2'
+const APP_SHELL = ['/', '/manifest.webmanifest', '/orion-app-icon.svg', '/orion-wordmark.svg']
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

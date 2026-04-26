@@ -132,8 +132,8 @@ export const showReminderNotification = async (reminder) => {
 
   const options = {
     body: `Reminder: ${reminder.title}`,
-    icon: '/app-icon.svg',
-    badge: '/app-icon.svg',
+    icon: '/orion-app-icon.svg?v=2',
+    badge: '/orion-app-icon.svg?v=2',
     tag: `orion-reminder-${reminder.id}`,
     renotify: true,
     data: {

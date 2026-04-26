@@ -9,13 +9,13 @@
   "theme_color": "#0f766e",
   "icons": [
     {
-      "src": "/orion-app-icon.svg",
+      "src": "/orion-app-icon.svg?v=2",
       "sizes": "48x48",
       "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "/orion-app-icon.svg",
+      "src": "/orion-app-icon.svg?v=2",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "maskable any"
