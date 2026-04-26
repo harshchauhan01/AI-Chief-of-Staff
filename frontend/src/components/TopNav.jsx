@@ -1,14 +1,14 @@
 import { Link, useLocation } from 'react-router-dom'
+import { isAuthenticatedSession } from '../services/guestSession'
 
 function TopNav({ showMenuToggle = false, isMenuOpen = false, onMenuToggle = () => {} }) {
   const location = useLocation()
-  const isAuthed = Boolean(localStorage.getItem('accessToken'))
+  const isAuthed = isAuthenticatedSession()
 
   return (
     <header className="top-nav">
       <div className="brand-wrap">
-        <div className="brand-dot" aria-hidden="true" />
-        <div className="brand">Chief of Staff AI</div>
+        <img src="/orion-wordmark.svg" alt="Orion" className="brand-logo" />
       </div>
       {!isAuthed && (
         <nav className="top-actions">

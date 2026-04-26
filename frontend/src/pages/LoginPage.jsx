@@ -1,6 +1,12 @@
-import { useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import api from '../api/client'
+import {
+  getGuestProfile,
+  isAuthenticatedSession,
+  startGuestSession,
+  startUserSession,
+} from '../services/guestSession'
 
 function LoginPage() {
   const navigate = useNavigate()
@@ -8,7 +14,14 @@ function LoginPage() {
   const redirectTo = location.state?.from || '/'
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [guestName, setGuestName] = useState(() => getGuestProfile().name)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (isAuthenticatedSession()) {
+      navigate('/', { replace: true })
+    }
+  }, [navigate])
 
   const handleSubmit = async (event) => {
     event.preventDefault()
@@ -16,12 +29,23 @@ function LoginPage() {
 
     try {
       const { data } = await api.post('/auth/token/', { username, password })
-      localStorage.setItem('accessToken', data.access)
-      localStorage.setItem('refreshToken', data.refresh)
+      startUserSession({ access: data.access, refresh: data.refresh })
       navigate(redirectTo, { replace: true })
     } catch {
       setError('Invalid credentials. Check your username and password.')
     }
+  }
+
+  const handleGuestAccess = () => {
+    setError('')
+    const name = guestName.trim()
+    if (!name) {
+      setError('Please enter your name to continue as a guest.')
+      return
+    }
+
+    startGuestSession(name)
+    navigate(redirectTo, { replace: true })
   }
 
   return (
@@ -41,6 +65,23 @@ function LoginPage() {
         />
         {error && <p className="error-text">{error}</p>}
         <button type="submit">Login</button>
+        <div className="guest-access-block">
+          <p>Or continue without login</p>
+          <div className="guest-access-row">
+            <input
+              id="guest_name"
+              placeholder="Your name"
+              value={guestName}
+              onChange={(event) => setGuestName(event.target.value)}
+            />
+            <button type="button" className="secondary-btn" onClick={handleGuestAccess}>
+              Use as guest
+            </button>
+          </div>
+        </div>
+        <p className="auth-switch-row">
+          New here? <Link to="/register">Create an account</Link>
+        </p>
       </form>
     </div>
   )

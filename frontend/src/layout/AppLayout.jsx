@@ -12,6 +12,7 @@ import {
   saveReminders,
   showReminderNotification,
 } from '../services/reminderService'
+import { clearSession, getGuestProfile, isGuestMode } from '../services/guestSession'
 
 const navItems = [
   { to: '/', label: 'Dashboard' },
@@ -20,11 +21,13 @@ const navItems = [
   { to: '/routine', label: 'Routine Tracker' },
   { to: '/daily-plan', label: 'Daily Plan' },
   { to: '/decision-helper', label: 'Decision Helper' },
+  { to: '/bill-calculator', label: 'Bill Calculator' },
 ]
 
 function AppLayout() {
   const location = useLocation()
   const navigate = useNavigate()
+  const guestName = isGuestMode() ? getGuestProfile().name : ''
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false)
   const [installPrompt, setInstallPrompt] = useState(null)
   const [installMessage, setInstallMessage] = useState('')
@@ -250,8 +253,7 @@ function AppLayout() {
   }
 
   const logout = () => {
-    localStorage.removeItem('accessToken')
-    localStorage.removeItem('refreshToken')
+    clearSession()
     setIsMobileNavOpen(false)
     navigate('/login')
   }
@@ -274,12 +276,30 @@ function AppLayout() {
       <div className="app-shell">
         <aside className={isMobileNavOpen ? 'sidebar mobile-open' : 'sidebar'}>
           <div className="sidebar-mobile-head">
-            <h1>Command Hub</h1>
+            <h1 className="sidebar-brand">
+              <img src="/orion-app-icon.svg" alt="" aria-hidden="true" className="sidebar-brand-icon" />
+              Orion
+            </h1>
             <button type="button" className="sidebar-close" onClick={closeMobileNav} aria-label="Close sidebar">
               Close
             </button>
           </div>
           <p className="sidebar-copy">Plan decisively, execute consistently, and review progress daily.</p>
+          {guestName && <p className="sidebar-guest-pill">Guest: {guestName}</p>}
+          <div className="sidebar-nav-wrap">
+            <nav>
+              {navItems.map((item) => (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className={location.pathname === item.to ? 'nav-link active' : 'nav-link'}
+                  onClick={closeMobileNav}
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
+          </div>
           <div className="sidebar-status-block">
             <div className={isOffline ? 'sidebar-status-pill offline' : 'sidebar-status-pill online'}>
               {isOffline ? 'Offline mode' : 'Online mode'}
@@ -378,20 +398,6 @@ function AppLayout() {
                 ))}
               </div>
             </div>
-          </div>
-          <div className="sidebar-nav-wrap">
-            <nav>
-              {navItems.map((item) => (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  className={location.pathname === item.to ? 'nav-link active' : 'nav-link'}
-                  onClick={closeMobileNav}
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </nav>
             <div className="sidebar-footer">
               <button type="button" className="sidebar-logout-btn" onClick={logout}>
                 Logout

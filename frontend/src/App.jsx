@@ -4,6 +4,7 @@ import AppLayout from './layout/AppLayout'
 import DashboardPage from './pages/DashboardPage'
 import DailyPlanPage from './pages/DailyPlanPage'
 import DecisionHelperPage from './pages/DecisionHelperPage'
+import BillCalculatorPage from './pages/BillCalculatorPage'
 import GoalsPage from './pages/GoalsPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
@@ -25,6 +26,7 @@ function App() {
           <Route path="/routine-progress" element={<RoutineProgressPage />} />
           <Route path="/daily-plan" element={<DailyPlanPage />} />
           <Route path="/decision-helper" element={<DecisionHelperPage />} />
+          <Route path="/bill-calculator" element={<BillCalculatorPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

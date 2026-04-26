@@ -47,7 +47,7 @@ function RegisterPage() {
         <input id="password" name="password" type="password" value={form.password} onChange={onChange} required />
         {error && <p className="error-text">{error}</p>}
         <button type="submit">Register</button>
-        <p>
+        <p className="auth-switch-row">
           Already have an account? <Link to="/login">Login</Link>
         </p>
       </form>
