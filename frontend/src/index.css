@@ -180,6 +180,24 @@ body {
   border: 1px solid #efc2b8;
 }
 
+.sidebar-status-pill.reminder.prompt {
+  background: #eef5ff;
+  color: #2457a6;
+  border: 1px solid #c9ddff;
+}
+
+.sidebar-status-pill.reminder.granted {
+  background: #def7e9;
+  color: #17603d;
+  border: 1px solid #b7e7cd;
+}
+
+.sidebar-status-pill.reminder.blocked {
+  background: #fae6e1;
+  color: #a24637;
+  border: 1px solid #efc2b8;
+}
+
 .sidebar-install-card {
   border: 1px solid #d4e4df;
   border-radius: 16px;
@@ -221,6 +239,123 @@ body {
   margin-top: 10px !important;
   font-size: 0.82rem !important;
   color: #5b645b !important;
+}
+
+.sidebar-reminder-card {
+  border: 1px solid #d8d2c4;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.7);
+  padding: 14px;
+}
+
+.sidebar-reminder-header {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.sidebar-reminder-header h2 {
+  margin: 0 0 4px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1rem;
+}
+
+.sidebar-reminder-header p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.sidebar-reminder-permission-btn,
+.sidebar-reminder-submit-btn,
+.sidebar-reminder-delete-btn {
+  border-radius: 12px;
+  border: 1px solid transparent;
+  font: inherit;
+}
+
+.sidebar-reminder-permission-btn {
+  background: #e8f1ff;
+  color: #2457a6;
+  border-color: #bfd3f5;
+  padding: 8px 10px;
+}
+
+.sidebar-reminder-form {
+  display: grid;
+  gap: 10px;
+}
+
+.sidebar-reminder-form input,
+.sidebar-reminder-form select {
+  width: 100%;
+}
+
+.sidebar-reminder-submit-btn {
+  background: var(--brand);
+  color: #fff;
+  padding: 10px 12px;
+  font-weight: 700;
+  box-shadow: 0 10px 20px rgba(15, 118, 110, 0.18);
+}
+
+.sidebar-reminder-note {
+  margin: 10px 0 0 !important;
+  color: var(--muted) !important;
+  font-size: 0.82rem !important;
+}
+
+.sidebar-reminder-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.sidebar-reminder-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.sidebar-reminder-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+  border: 1px solid #e5ddd0;
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.84);
+}
+
+.sidebar-reminder-item strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.sidebar-reminder-item p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.sidebar-reminder-delete-btn {
+  flex-shrink: 0;
+  background: #fff4ea;
+  color: #9a4d21;
+  border-color: #f3d0b2;
+  padding: 7px 10px;
+  font-size: 0.82rem;
+}
+
+.sidebar-reminder-delete-btn:hover,
+.sidebar-reminder-permission-btn:hover,
+.sidebar-reminder-submit-btn:hover {
+  transform: translateY(-1px);
 }
 
 .sidebar-logout-btn {
@@ -1455,6 +1590,18 @@ textarea {
 
   .sidebar-status-pill {
     font-size: 0.75rem;
+  }
+
+  .sidebar-reminder-header {
+    flex-direction: column;
+  }
+
+  .sidebar-reminder-item {
+    flex-direction: column;
+  }
+
+  .sidebar-reminder-delete-btn {
+    width: 100%;
   }
 
   .sidebar.mobile-open {
