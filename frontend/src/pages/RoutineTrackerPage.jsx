@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import api from '../api/client'
+import {
+  DEFAULT_ROUTINE_ALERT_TIMES,
+  loadRoutineAlertTimes,
+  saveRoutineAlertTimes,
+} from '../services/reminderService'
 
 const WINDOW_DAYS = 8
 
@@ -43,12 +48,15 @@ function RoutineTrackerPage() {
   const [matrix, setMatrix] = useState({ days: [], tasks: [], start: '', end: '' })
   const [startDate, setStartDate] = useState(toIsoDate(getYesterday()))
   const [liveNow, setLiveNow] = useState(new Date())
+  const [routineAlertTimes, setRoutineAlertTimes] = useState(() => loadRoutineAlertTimes())
+  const [isAlertSettingsOpen, setIsAlertSettingsOpen] = useState(false)
   const [taskTitle, setTaskTitle] = useState('')
   const [routineTime, setRoutineTime] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [taskPendingDelete, setTaskPendingDelete] = useState(null)
+  const [alertMessage, setAlertMessage] = useState('')
   const [error, setError] = useState('')
 
   const fetchMatrix = useCallback(async () => {
@@ -145,6 +153,28 @@ function RoutineTrackerPage() {
     }
   }
 
+  const updateRoutineAlertTime = (index, value) => {
+    setRoutineAlertTimes((current) => current.map((time, currentIndex) => (currentIndex === index ? value : time)))
+    setAlertMessage('')
+  }
+
+  const saveRoutineAlertSchedule = (event) => {
+    event.preventDefault()
+    const normalizedTimes = saveRoutineAlertTimes(routineAlertTimes)
+    setRoutineAlertTimes(normalizedTimes)
+    setAlertMessage(`Missed-task alerts saved for ${normalizedTimes.join(', ')}.`)
+  }
+
+  const resetRoutineAlertSchedule = () => {
+    const defaultTimes = saveRoutineAlertTimes(DEFAULT_ROUTINE_ALERT_TIMES)
+    setRoutineAlertTimes(defaultTimes)
+    setAlertMessage('Missed-task alerts reset to 8:00 PM, 10:00 PM, and 11:00 PM.')
+  }
+
+  const toggleAlertSettings = () => {
+    setIsAlertSettingsOpen((current) => !current)
+  }
+
   const toggleCheck = async (taskId, day, currentDone) => {
     const todayIso = toIsoDate(new Date())
     if (day !== todayIso) {
@@ -200,6 +230,51 @@ function RoutineTrackerPage() {
       <div className="routine-layout">
         <aside className="routine-tasks-panel">
           <h3>Routine Tasks</h3>
+          <section className="routine-alert-card">
+            <div className="routine-alert-header">
+              <div>
+                <h4>Missed-task alerts</h4>
+                <p>Send a browser notification for any unchecked routine task at the times below.</p>
+              </div>
+              <button
+                type="button"
+                className="routine-alert-toggle"
+                onClick={toggleAlertSettings}
+                aria-expanded={isAlertSettingsOpen}
+                aria-label={isAlertSettingsOpen ? 'Hide missed-task alert settings' : 'Show missed-task alert settings'}
+              >
+                ⚙
+              </button>
+            </div>
+            <p className="routine-alert-summary">Current schedule: {routineAlertTimes.map((time) => formatRoutineTime(time)).join(', ')}</p>
+            {isAlertSettingsOpen && (
+              <form className="routine-alert-form" onSubmit={saveRoutineAlertSchedule}>
+                <div className="routine-alert-grid">
+                  {routineAlertTimes.map((time, index) => (
+                    <label key={`routine-alert-time-${index}`} className="routine-alert-field">
+                      <span>{index === 0 ? 'First alert' : index === 1 ? 'Second alert' : 'Final alert'}</span>
+                      <input
+                        type="time"
+                        value={time}
+                        onChange={(event) => updateRoutineAlertTime(index, event.target.value)}
+                        required
+                      />
+                    </label>
+                  ))}
+                </div>
+                <div className="routine-alert-actions">
+                  <button type="submit" className="secondary-btn">
+                    Save timings
+                  </button>
+                  <button type="button" className="secondary-btn" onClick={resetRoutineAlertSchedule}>
+                    Use defaults
+                  </button>
+                </div>
+              </form>
+            )}
+            <p className="routine-alert-note">Defaults are 8:00 PM, 10:00 PM, and 11:00 PM. These alerts share the app's notification permission.</p>
+            {alertMessage && <p className="routine-alert-message">{alertMessage}</p>}
+          </section>
           <form className="routine-add-form" onSubmit={addRoutineTask}>
             <input
               placeholder="Add a routine task"

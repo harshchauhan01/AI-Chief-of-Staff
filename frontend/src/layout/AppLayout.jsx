@@ -1,15 +1,22 @@
 import { useEffect, useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import api from '../api/client'
 import TopNav from '../components/TopNav'
 import {
   createReminder,
   formatReminderDueAt,
+  getDueRoutineAlerts,
   getNotificationPermission,
   getPendingReminders,
+  loadRoutineAlertHistory,
+  loadRoutineAlertTimes,
   loadReminders,
+  markRoutineAlertsSent,
   requestNotificationPermission,
   reminderDueAt,
+  saveRoutineAlertHistory,
   saveReminders,
+  showRoutineAlertNotification,
   showReminderNotification,
 } from '../services/reminderService'
 import { clearSession, getGuestProfile, isGuestMode } from '../services/guestSession'
@@ -23,6 +30,14 @@ const navItems = [
   { to: '/decision-helper', label: 'Decision Helper' },
   { to: '/bill-calculator', label: 'Bill Calculator' },
 ]
+
+const toIsoDate = (value = new Date()) => {
+  const date = value instanceof Date ? value : new Date(value)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
 
 function AppLayout() {
   const location = useLocation()
@@ -114,6 +129,74 @@ function AppLayout() {
       document.removeEventListener('visibilitychange', onVisibilityChange)
     }
   }, [reminderPermission, reminders])
+
+  useEffect(() => {
+    if (reminderPermission !== 'granted') {
+      return undefined
+    }
+
+    let cancelled = false
+
+    const processRoutineAlerts = async () => {
+      try {
+        const currentHistory = loadRoutineAlertHistory()
+        const { data } = await api.get('/tasks/routines/matrix/', {
+          params: {
+            start: toIsoDate(),
+            days: 7,
+          },
+        })
+
+        if (cancelled) {
+          return
+        }
+
+        const dueAlerts = getDueRoutineAlerts({
+          matrix: data,
+          times: loadRoutineAlertTimes(),
+          history: currentHistory,
+          now: new Date(),
+        })
+
+        if (dueAlerts.length === 0) {
+          return
+        }
+
+        const successfulAlerts = []
+        for (const alert of dueAlerts) {
+          const showedNotification = await showRoutineAlertNotification(alert)
+          if (showedNotification) {
+            successfulAlerts.push(alert)
+          }
+        }
+
+        if (successfulAlerts.length > 0) {
+          const nextHistory = markRoutineAlertsSent(currentHistory, successfulAlerts)
+          saveRoutineAlertHistory(nextHistory)
+        }
+      } catch {
+        // Routine alerts are best-effort and should never block the app shell.
+      }
+    }
+
+    void processRoutineAlerts()
+
+    const intervalId = window.setInterval(() => void processRoutineAlerts(), 60000)
+
+    const onVisibilityChange = () => {
+      if (!document.hidden) {
+        void processRoutineAlerts()
+      }
+    }
+
+    document.addEventListener('visibilitychange', onVisibilityChange)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(intervalId)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+    }
+  }, [reminderPermission])
 
   useEffect(() => {
     const onBeforeInstallPrompt = (event) => {
