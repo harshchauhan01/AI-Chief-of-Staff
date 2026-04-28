@@ -14,6 +14,7 @@ class Task(models.Model):
 	title = models.CharField(max_length=255)
 	description = models.TextField(blank=True)
 	due_date = models.DateField(null=True, blank=True)
+	reminder_at = models.DateTimeField(null=True, blank=True)
 	estimated_minutes = models.PositiveIntegerField(null=True, blank=True)
 	impact_score = models.PositiveSmallIntegerField(default=3)
 	urgency_score = models.PositiveSmallIntegerField(default=3)

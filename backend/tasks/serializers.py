@@ -14,6 +14,7 @@ class TaskSerializer(serializers.ModelSerializer):
             "title",
             "description",
             "due_date",
+            "reminder_at",
             "estimated_minutes",
             "impact_score",
             "urgency_score",

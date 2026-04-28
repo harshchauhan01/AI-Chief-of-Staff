@@ -453,6 +453,26 @@ body {
   display: flex;
   gap: 10px;
   margin: 14px 0 16px;
+  flex-wrap: wrap;
+}
+
+.inline-form > input,
+.inline-form > select,
+.inline-form > button,
+.inline-form > label {
+  min-width: 0;
+}
+
+.task-reminder-field {
+  display: grid;
+  gap: 6px;
+  flex: 1 1 220px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.task-reminder-field input {
+  width: 100%;
 }
 
 input,

@@ -5,6 +5,7 @@ const initialForm = {
   title: '',
   goal: '',
   due_date: '',
+  reminder_at: '',
   estimated_minutes: '',
   impact_score: 3,
   urgency_score: 3,
@@ -29,6 +30,20 @@ const getPriorityScore = (task) => {
   const minutes = Math.max(Number(task.estimated_minutes) || 30, 1)
   const effortFactor = 1 / minutes
   return Number(((task.urgency_score * 0.45) + (task.impact_score * 0.45) + (effortFactor * 300 * 0.1)).toFixed(2))
+}
+
+const formatTaskReminderAt = (isoValue) => {
+  if (!isoValue) {
+    return ''
+  }
+
+  return new Intl.DateTimeFormat('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(new Date(isoValue))
 }
 
 function TasksPage() {
@@ -71,12 +86,19 @@ function TasksPage() {
   const createTask = async (event) => {
     event.preventDefault()
     setError('')
+
+    if (form.reminder_at && new Date(form.reminder_at).getTime() <= Date.now()) {
+      setError('Reminder time must be in the future.')
+      return
+    }
+
     try {
       await api.post('/tasks/', {
         title: form.title,
         status: 'todo',
         goal: form.goal || null,
         due_date: form.due_date || null,
+        reminder_at: form.reminder_at || null,
         estimated_minutes: form.estimated_minutes ? Number(form.estimated_minutes) : null,
         impact_score: Number(form.impact_score),
         urgency_score: Number(form.urgency_score),
@@ -211,6 +233,15 @@ function TasksPage() {
           value={form.due_date}
           onChange={(e) => handleFieldChange('due_date', e.target.value)}
         />
+        <label className="task-reminder-field">
+          Reminder
+          <input
+            type="datetime-local"
+            value={form.reminder_at}
+            onChange={(e) => handleFieldChange('reminder_at', e.target.value)}
+            title="Optional reminder time"
+          />
+        </label>
         <input
           type="number"
           min="1"
@@ -290,6 +321,7 @@ function TasksPage() {
                 {statusLabel[task.status] || task.status} | Score: {getPriorityScore(task)}
               </span>
               {task.due_date && <span>Due: {task.due_date}</span>}
+              {task.reminder_at && <span>Reminder: {formatTaskReminderAt(task.reminder_at)}</span>}
             </div>
             <div className="task-actions">
               <button type="button" className="secondary-btn" onClick={() => updateTaskStatus(task)}>

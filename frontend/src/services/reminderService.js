@@ -1,6 +1,7 @@
 const REMINDERS_STORAGE_KEY = 'orion-reminders:v1'
 const ROUTINE_ALERT_TIMES_STORAGE_KEY = 'orion-routine-alert-times:v1'
 const ROUTINE_ALERT_HISTORY_STORAGE_KEY = 'orion-routine-alert-history:v1'
+const TASK_REMINDER_HISTORY_STORAGE_KEY = 'orion-task-reminder-history:v1'
 export const DEFAULT_ROUTINE_ALERT_TIMES = ['20:00', '22:00', '23:00']
 
 const isBrowser = typeof window !== 'undefined'
@@ -126,6 +127,8 @@ const summarizeTaskTitles = (tasks) => {
 
 const createRoutineAlertKey = (day, timeValue, taskId) => `${day}|${timeValue}|${taskId}`
 
+const createTaskReminderKey = (taskId, reminderAt) => `${taskId}|${reminderAt}`
+
 export const loadReminders = () => {
   if (!isBrowser) {
     return []
@@ -212,6 +215,46 @@ export const saveRoutineAlertHistory = (history) => {
   }
 
   localStorage.setItem(ROUTINE_ALERT_HISTORY_STORAGE_KEY, JSON.stringify(normalizedHistory))
+  return normalizedHistory
+}
+
+const normalizeTaskReminderHistory = (history) => {
+  if (!history || typeof history !== 'object') {
+    return { sent: [] }
+  }
+
+  const sent = Array.isArray(history.sent) ? history.sent.map(String).filter(Boolean) : []
+  return {
+    sent: [...new Set(sent)],
+  }
+}
+
+export const loadTaskReminderHistory = () => {
+  if (!isBrowser) {
+    return { sent: [] }
+  }
+
+  try {
+    const rawHistory = localStorage.getItem(TASK_REMINDER_HISTORY_STORAGE_KEY)
+    if (!rawHistory) {
+      return { sent: [] }
+    }
+
+    return normalizeTaskReminderHistory(JSON.parse(rawHistory))
+  } catch {
+    localStorage.removeItem(TASK_REMINDER_HISTORY_STORAGE_KEY)
+    return { sent: [] }
+  }
+}
+
+export const saveTaskReminderHistory = (history) => {
+  const normalizedHistory = normalizeTaskReminderHistory(history)
+
+  if (!isBrowser) {
+    return normalizedHistory
+  }
+
+  localStorage.setItem(TASK_REMINDER_HISTORY_STORAGE_KEY, JSON.stringify(normalizedHistory))
   return normalizedHistory
 }
 
@@ -385,6 +428,83 @@ export const showRoutineAlertNotification = async (alert) => {
     }
 
     new Notification('Routine tasks still open', options)
+    return true
+  } catch {
+    return false
+  }
+}
+
+export const getDueTaskReminders = ({ tasks, history, now = new Date() }) => {
+  const normalizedHistory = normalizeTaskReminderHistory(history)
+  const currentTime = now.getTime()
+  const taskList = Array.isArray(tasks) ? tasks : []
+
+  return taskList
+    .map((task) => {
+      if (task.status === 'done' || !task.reminder_at) {
+        return null
+      }
+
+      const reminderTime = new Date(task.reminder_at)
+      if (Number.isNaN(reminderTime.getTime()) || reminderTime.getTime() > currentTime) {
+        return null
+      }
+
+      const reminderKey = createTaskReminderKey(task.id, reminderTime.toISOString())
+      if (normalizedHistory.sent.includes(reminderKey)) {
+        return null
+      }
+
+      return {
+        taskId: task.id,
+        title: String(task.title || '').trim(),
+        reminderAt: reminderTime.toISOString(),
+        reminderLabel: formatReminderDueAt(reminderTime.toISOString()),
+        reminderKey,
+      }
+    })
+    .filter(Boolean)
+}
+
+export const markTaskRemindersSent = (history, reminders) => {
+  const normalizedHistory = normalizeTaskReminderHistory(history)
+  const sent = new Set(normalizedHistory.sent)
+
+  for (const reminder of reminders) {
+    if (reminder.reminderKey) {
+      sent.add(reminder.reminderKey)
+    }
+  }
+
+  return {
+    sent: Array.from(sent),
+  }
+}
+
+export const showTaskReminderNotification = async (reminder) => {
+  if (!supportsNotifications() || Notification.permission !== 'granted') {
+    return false
+  }
+
+  const options = {
+    body: `${reminder.reminderLabel}: ${reminder.title} is still open.`,
+    icon: '/orion-app-icon.svg?v=2',
+    badge: '/orion-app-icon.svg?v=2',
+    tag: `orion-task-reminder-${reminder.taskId}`,
+    renotify: true,
+    data: {
+      url: '/tasks',
+    },
+  }
+
+  try {
+    if ('serviceWorker' in navigator) {
+      const registration = await navigator.serviceWorker.ready
+      await registration.showNotification('Task reminder', options)
+      return true
+    }
+
+    new Notification('Task reminder', options)
     return true
   } catch {
     return false

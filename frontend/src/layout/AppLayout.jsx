@@ -6,16 +6,21 @@ import {
   createReminder,
   formatReminderDueAt,
   getDueRoutineAlerts,
+  getDueTaskReminders,
   getNotificationPermission,
   getPendingReminders,
   loadRoutineAlertHistory,
   loadRoutineAlertTimes,
+  loadTaskReminderHistory,
   loadReminders,
   markRoutineAlertsSent,
+  markTaskRemindersSent,
   requestNotificationPermission,
   reminderDueAt,
   saveRoutineAlertHistory,
+  saveTaskReminderHistory,
   saveReminders,
+  showTaskReminderNotification,
   showRoutineAlertNotification,
   showReminderNotification,
 } from '../services/reminderService'
@@ -186,6 +191,68 @@ function AppLayout() {
     const onVisibilityChange = () => {
       if (!document.hidden) {
         void processRoutineAlerts()
+      }
+    }
+
+    document.addEventListener('visibilitychange', onVisibilityChange)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(intervalId)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+    }
+  }, [reminderPermission])
+
+  useEffect(() => {
+    if (reminderPermission !== 'granted') {
+      return undefined
+    }
+
+    let cancelled = false
+
+    const processTaskReminders = async () => {
+      try {
+        const currentHistory = loadTaskReminderHistory()
+        const { data } = await api.get('/tasks/')
+
+        if (cancelled) {
+          return
+        }
+
+        const dueTaskReminders = getDueTaskReminders({
+          tasks: data,
+          history: currentHistory,
+          now: new Date(),
+        })
+
+        if (dueTaskReminders.length === 0) {
+          return
+        }
+
+        const successfulReminders = []
+        for (const reminder of dueTaskReminders) {
+          const showedNotification = await showTaskReminderNotification(reminder)
+          if (showedNotification) {
+            successfulReminders.push(reminder)
+          }
+        }
+
+        if (successfulReminders.length > 0) {
+          const nextHistory = markTaskRemindersSent(currentHistory, successfulReminders)
+          saveTaskReminderHistory(nextHistory)
+        }
+      } catch {
+        // Task reminders are best-effort and should never block the app shell.
+      }
+    }
+
+    void processTaskReminders()
+
+    const intervalId = window.setInterval(() => void processTaskReminders(), 60000)
+
+    const onVisibilityChange = () => {
+      if (!document.hidden) {
+        void processTaskReminders()
       }
     }
 

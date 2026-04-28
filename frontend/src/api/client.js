@@ -436,6 +436,7 @@ const handleGuestRequest = (config) => {
       title: String(payload.title || '').trim(),
       description: payload.description || '',
       due_date: payload.due_date || null,
+      reminder_at: payload.reminder_at || null,
       estimated_minutes: payload.estimated_minutes || null,
       impact_score: Number(payload.impact_score || 3),
       urgency_score: Number(payload.urgency_score || 3),
