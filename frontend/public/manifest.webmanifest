@@ -20,5 +20,14 @@
       "type": "image/svg+xml",
       "purpose": "maskable any"
     }
-  ]
+  ],
+  "share_target": {
+    "action": "/money-tracker",
+    "method": "GET",
+    "params": {
+      "title": "share_title",
+      "text": "share_text",
+      "url": "share_url"
+    }
+  }
 }

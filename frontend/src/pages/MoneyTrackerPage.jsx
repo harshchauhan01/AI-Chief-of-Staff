@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import CategoryBreakdownChart from '../components/CategoryBreakdownChart'
 import { CATEGORIES, CATEGORY_MAP } from '../constants/moneyCategories'
+import { SHARE_DRAFT_STORAGE_KEY } from '../constants/shareTarget'
+import { parseSharedExpenseText } from '../utils/parseSharedExpense'
 
 const MONEY_STORAGE_KEY = 'orion-money-tracker:v1'
 
@@ -86,6 +88,7 @@ function MoneyTrackerPage() {
     amount: '',
   }))
   const [formError, setFormError] = useState('')
+  const [shareBanner, setShareBanner] = useState('')
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -93,6 +96,32 @@ function MoneyTrackerPage() {
     }
     localStorage.setItem(MONEY_STORAGE_KEY, JSON.stringify({ budgets, expenses, nextId }))
   }, [budgets, expenses, nextId])
+
+  useEffect(() => {
+    const raw = localStorage.getItem(SHARE_DRAFT_STORAGE_KEY)
+    if (!raw) {
+      return
+    }
+    localStorage.removeItem(SHARE_DRAFT_STORAGE_KEY)
+
+    try {
+      const draft = JSON.parse(raw)
+      const combinedText = [draft.text, draft.title].filter(Boolean).join(' ')
+      if (!combinedText) {
+        return
+      }
+
+      const { amount, place } = parseSharedExpenseText(combinedText)
+      setForm((current) => ({
+        ...current,
+        amount: amount || current.amount,
+        place: place || current.place,
+      }))
+      setShareBanner(combinedText)
+    } catch {
+      // Ignore a malformed draft — the Add Expense form just stays blank.
+    }
+  }, [])
 
   useEffect(() => {
     setBudgetInput(budgets[selectedMonth] !== undefined ? String(budgets[selectedMonth]) : '')
@@ -260,6 +289,14 @@ function MoneyTrackerPage() {
 
       <article className="money-add-card no-print">
         <h3>Add an expense</h3>
+        {shareBanner && (
+          <p className="money-share-banner no-print">
+            Filled in from what you shared: "{shareBanner}". Double-check the amount and place, then tap Add.
+            <button type="button" className="money-share-dismiss" onClick={() => setShareBanner('')}>
+              Dismiss
+            </button>
+          </p>
+        )}
         <form className="money-add-form" onSubmit={addExpense}>
           <input
             type="date"

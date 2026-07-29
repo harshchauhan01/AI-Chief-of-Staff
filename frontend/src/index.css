@@ -1774,6 +1774,28 @@ button:hover {
   font-size: 0.85rem;
 }
 
+.money-share-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--brand-soft);
+  color: #114936;
+  font-size: 0.88rem;
+}
+
+.money-share-dismiss {
+  background: transparent;
+  color: #114936;
+  border: 1px solid #90c9b6;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  flex-shrink: 0;
+}
+
 .money-chart-card-head {
   display: flex;
   justify-content: space-between;
