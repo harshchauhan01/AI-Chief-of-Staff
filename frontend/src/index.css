@@ -1796,6 +1796,98 @@ button:hover {
   flex-shrink: 0;
 }
 
+.money-quickadd-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.74);
+  padding: 12px 14px;
+}
+
+.money-quickadd-row p {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.money-quickadd-row button {
+  flex-shrink: 0;
+}
+
+.quick-add-shell {
+  width: min(420px, 100%);
+  display: grid;
+  gap: 12px;
+}
+
+.quick-add-shell h2 {
+  margin: 0;
+}
+
+.quick-add-shell > p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.quick-add-capture {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.74);
+  padding: 12px;
+}
+
+.quick-add-capture textarea {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font: inherit;
+  resize: vertical;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.quick-add-form {
+  display: grid;
+  gap: 6px;
+}
+
+.quick-add-form label {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-top: 4px;
+}
+
+.quick-add-form button[type='submit'] {
+  margin-top: 8px;
+}
+
+.quick-add-link {
+  text-align: center;
+  color: var(--brand-strong);
+  font-size: 0.88rem;
+}
+
+.quick-add-success {
+  display: grid;
+  gap: 10px;
+  text-align: center;
+}
+
+.quick-add-success h2 {
+  margin: 0;
+  color: var(--brand-strong);
+}
+
+.quick-add-success-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
 .money-chart-card-head {
   display: flex;
   justify-content: space-between;

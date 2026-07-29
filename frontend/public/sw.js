@@ -61,17 +61,25 @@ self.addEventListener('fetch', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
+  const targetUrl = event.notification.data?.url || '/'
 
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (windowClients) => {
       for (const client of windowClients) {
         if ('focus' in client) {
+          if ('navigate' in client) {
+            try {
+              await client.navigate(targetUrl)
+            } catch {
+              // Ignore navigation errors (e.g. cross-origin) and just focus the window.
+            }
+          }
           return client.focus()
         }
       }
 
       if (clients.openWindow) {
-        return clients.openWindow('/')
+        return clients.openWindow(targetUrl)
       }
 
       return undefined

@@ -3,39 +3,14 @@ import CategoryBreakdownChart from '../components/CategoryBreakdownChart'
 import { CATEGORIES, CATEGORY_MAP } from '../constants/moneyCategories'
 import { SHARE_DRAFT_STORAGE_KEY } from '../constants/shareTarget'
 import { parseSharedExpenseText } from '../utils/parseSharedExpense'
-
-const MONEY_STORAGE_KEY = 'orion-money-tracker:v1'
-
-const asCurrency = (value) =>
-  new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value)
-
-const toNumber = (value) => {
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : 0
-}
-
-const todayIso = () => {
-  const date = new Date()
-  const yyyy = date.getFullYear()
-  const mm = String(date.getMonth() + 1).padStart(2, '0')
-  const dd = String(date.getDate()).padStart(2, '0')
-  return `${yyyy}-${mm}-${dd}`
-}
-
-const currentMonthIso = () => todayIso().slice(0, 7)
-
-const formatMonthLabel = (monthIso) => {
-  const [year, month] = monthIso.split('-').map(Number)
-  if (!year || !month) {
-    return monthIso
-  }
-  return new Date(year, month - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-}
+import { asCurrency, currentMonthIso, formatMonthLabel, todayIso, toNumber } from '../utils/money'
+import { loadMoneyState, saveMoneyState } from '../utils/moneyStore'
+import {
+  disableQuickAddNotification,
+  enableQuickAddNotification,
+  getQuickAddNotificationStatus,
+  refreshQuickAddNotificationIfEnabled,
+} from '../services/quickAddNotification'
 
 const csvField = (value) => {
   const str = String(value ?? '')
@@ -45,32 +20,8 @@ const csvField = (value) => {
   return str
 }
 
-const emptyState = () => ({ budgets: {}, expenses: [], nextId: 1 })
-
-const loadState = () => {
-  if (typeof window === 'undefined') {
-    return emptyState()
-  }
-
-  const raw = localStorage.getItem(MONEY_STORAGE_KEY)
-  if (!raw) {
-    return emptyState()
-  }
-
-  try {
-    const parsed = JSON.parse(raw)
-    return {
-      budgets: parsed && typeof parsed.budgets === 'object' && parsed.budgets !== null ? parsed.budgets : {},
-      expenses: Array.isArray(parsed?.expenses) ? parsed.expenses : [],
-      nextId: Number.isFinite(Number(parsed?.nextId)) ? Number(parsed.nextId) : 1,
-    }
-  } catch {
-    return emptyState()
-  }
-}
-
 function MoneyTrackerPage() {
-  const initial = useMemo(() => loadState(), [])
+  const initial = useMemo(() => loadMoneyState(), [])
 
   const [budgets, setBudgets] = useState(initial.budgets)
   const [expenses, setExpenses] = useState(initial.expenses)
@@ -89,13 +40,16 @@ function MoneyTrackerPage() {
   }))
   const [formError, setFormError] = useState('')
   const [shareBanner, setShareBanner] = useState('')
+  const [notifStatus, setNotifStatus] = useState(() => getQuickAddNotificationStatus())
+  const [notifMessage, setNotifMessage] = useState('')
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
-      return
-    }
-    localStorage.setItem(MONEY_STORAGE_KEY, JSON.stringify({ budgets, expenses, nextId }))
+    saveMoneyState({ budgets, expenses, nextId })
   }, [budgets, expenses, nextId])
+
+  useEffect(() => {
+    refreshQuickAddNotificationIfEnabled()
+  }, [])
 
   useEffect(() => {
     const raw = localStorage.getItem(SHARE_DRAFT_STORAGE_KEY)
@@ -234,6 +188,28 @@ function MoneyTrackerPage() {
     URL.revokeObjectURL(url)
   }
 
+  const toggleQuickAddNotification = async () => {
+    if (notifStatus.enabled) {
+      await disableQuickAddNotification()
+      setNotifStatus(getQuickAddNotificationStatus())
+      setNotifMessage('Quick-add notification turned off.')
+      return
+    }
+
+    const result = await enableQuickAddNotification()
+    setNotifStatus(getQuickAddNotificationStatus())
+
+    if (result.permission === 'denied') {
+      setNotifMessage('Notifications are blocked — enable them in your browser/app settings.')
+    } else if (result.permission === 'unsupported') {
+      setNotifMessage('This browser does not support notifications.')
+    } else if (result.enabled) {
+      setNotifMessage('Enabled — check your notification shade for "Quick Add".')
+    } else {
+      setNotifMessage('Could not enable the notification. Try again.')
+    }
+  }
+
   return (
     <section className="panel money-shell">
       <div className="money-header">
@@ -252,6 +228,17 @@ function MoneyTrackerPage() {
           </select>
         </div>
       </div>
+
+      <div className="money-quickadd-row no-print">
+        <div>
+          <strong>Quick-add notification</strong>
+          <p>Keep a "Quick Add" notification in your shade — tap it anytime to log an expense in a small window.</p>
+        </div>
+        <button type="button" className="secondary-btn" onClick={toggleQuickAddNotification}>
+          {notifStatus.enabled ? 'Disable' : 'Enable'}
+        </button>
+      </div>
+      {notifMessage && <p className="money-inline-message no-print">{notifMessage}</p>}
 
       <div className="money-stat-row">
         <article className="money-stat-tile">

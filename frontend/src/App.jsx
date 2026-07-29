@@ -8,6 +8,7 @@ import BillCalculatorPage from './pages/BillCalculatorPage'
 import GoalsPage from './pages/GoalsPage'
 import LoginPage from './pages/LoginPage'
 import MoneyTrackerPage from './pages/MoneyTrackerPage'
+import QuickAddExpensePage from './pages/QuickAddExpensePage'
 import RegisterPage from './pages/RegisterPage'
 import RoutineProgressPage from './pages/RoutineProgressPage'
 import RoutineTrackerPage from './pages/RoutineTrackerPage'
@@ -30,6 +31,7 @@ function App() {
           <Route path="/bill-calculator" element={<BillCalculatorPage />} />
           <Route path="/money-tracker" element={<MoneyTrackerPage />} />
         </Route>
+        <Route path="/quick-add" element={<QuickAddExpensePage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
