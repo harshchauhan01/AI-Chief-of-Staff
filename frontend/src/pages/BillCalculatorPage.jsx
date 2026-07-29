@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { rememberKnownPerson } from '../utils/knownPeople'
 
 const BILL_STORAGE_KEY = 'orion-bill-calculator:v1'
 
@@ -205,6 +206,7 @@ function BillCalculatorPage() {
     }
 
     setUsers((current) => [...current, trimmed])
+    rememberKnownPerson(trimmed)
     setEntries((current) =>
       current.map((entry) => ({
         ...entry,

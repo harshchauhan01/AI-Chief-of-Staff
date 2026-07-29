@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import SplitExpenseFields from '../components/SplitExpenseFields'
 import { CATEGORIES } from '../constants/moneyCategories'
-import { todayIso, toNumber } from '../utils/money'
+import { asCurrency, todayIso, toNumber } from '../utils/money'
 import { addExpenseToStore } from '../utils/moneyStore'
 import { parseSharedExpenseText } from '../utils/parseSharedExpense'
+import { computeShareAmount } from '../utils/splitShare'
 
 const initialForm = () => ({
   date: todayIso(),
@@ -11,6 +13,8 @@ const initialForm = () => ({
   place: '',
   note: '',
   amount: '',
+  isSplit: false,
+  splitWith: [],
 })
 
 function QuickAddExpensePage() {
@@ -88,6 +92,9 @@ function QuickAddExpensePage() {
       place: form.place.trim(),
       note: form.note.trim(),
       amount,
+      isSplit: form.isSplit,
+      splitWith: form.isSplit ? form.splitWith : [],
+      shareAmount: computeShareAmount(amount, form.isSplit, form.splitWith),
     })
 
     setLastSaved(saved)
@@ -108,8 +115,13 @@ function QuickAddExpensePage() {
             <h2>Added ✓</h2>
             <p>
               {CATEGORIES.find((category) => category.value === lastSaved.category)?.label || 'Expense'}
-              {lastSaved.place ? ` — ${lastSaved.place}` : ''}: ₹{lastSaved.amount}
+              {lastSaved.place ? ` — ${lastSaved.place}` : ''}: {asCurrency(lastSaved.amount)}
             </p>
+            {lastSaved.isSplit && lastSaved.splitWith?.length > 0 && (
+              <p className="quick-add-split-note">
+                Split with {lastSaved.splitWith.join(', ')} — your share: {asCurrency(lastSaved.shareAmount)}
+              </p>
+            )}
             <div className="quick-add-success-actions">
               <button type="button" onClick={addAnother}>
                 Add another
@@ -194,6 +206,14 @@ function QuickAddExpensePage() {
                 placeholder="0.00"
                 value={form.amount}
                 onChange={(event) => updateForm('amount', event.target.value)}
+              />
+
+              <SplitExpenseFields
+                amount={form.amount}
+                isSplit={form.isSplit}
+                onToggleSplit={(value) => updateForm('isSplit', value)}
+                splitWith={form.splitWith}
+                onChangeSplitWith={(value) => updateForm('splitWith', value)}
               />
 
               <button type="submit">Add expense</button>

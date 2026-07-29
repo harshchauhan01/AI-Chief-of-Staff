@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import CategoryBreakdownChart from '../components/CategoryBreakdownChart'
+import SplitExpenseFields from '../components/SplitExpenseFields'
 import { CATEGORIES, CATEGORY_MAP } from '../constants/moneyCategories'
 import { SHARE_DRAFT_STORAGE_KEY } from '../constants/shareTarget'
 import { parseSharedExpenseText } from '../utils/parseSharedExpense'
 import { asCurrency, currentMonthIso, formatMonthLabel, todayIso, toNumber } from '../utils/money'
 import { loadMoneyState, saveMoneyState } from '../utils/moneyStore'
+import { computeShareAmount } from '../utils/splitShare'
 import {
   disableQuickAddNotification,
   enableQuickAddNotification,
@@ -37,6 +39,8 @@ function MoneyTrackerPage() {
     place: '',
     note: '',
     amount: '',
+    isSplit: false,
+    splitWith: [],
   }))
   const [formError, setFormError] = useState('')
   const [shareBanner, setShareBanner] = useState('')
@@ -96,7 +100,7 @@ function MoneyTrackerPage() {
 
   const totalMoney = toNumber(budgets[selectedMonth])
   const totalSpent = useMemo(
-    () => monthExpenses.reduce((sum, expense) => sum + toNumber(expense.amount), 0),
+    () => monthExpenses.reduce((sum, expense) => sum + toNumber(expense.shareAmount ?? expense.amount), 0),
     [monthExpenses],
   )
   const remaining = totalMoney - totalSpent
@@ -104,7 +108,7 @@ function MoneyTrackerPage() {
   const categoryBreakdown = useMemo(() => {
     const totals = new Map()
     for (const expense of monthExpenses) {
-      const amount = toNumber(expense.amount)
+      const amount = toNumber(expense.shareAmount ?? expense.amount)
       if (amount <= 0) {
         continue
       }
@@ -153,12 +157,15 @@ function MoneyTrackerPage() {
       place: form.place.trim(),
       note: form.note.trim(),
       amount,
+      isSplit: form.isSplit,
+      splitWith: form.isSplit ? form.splitWith : [],
+      shareAmount: computeShareAmount(amount, form.isSplit, form.splitWith),
     }
 
     setExpenses((current) => [expense, ...current])
     setNextId((current) => current + 1)
     setFormError('')
-    setForm((current) => ({ ...current, place: '', note: '', amount: '' }))
+    setForm((current) => ({ ...current, place: '', note: '', amount: '', isSplit: false, splitWith: [] }))
     setSelectedMonth(expense.month)
   }
 
@@ -167,13 +174,15 @@ function MoneyTrackerPage() {
   }
 
   const downloadCsv = () => {
-    const header = ['Date', 'Category', 'Place', 'Note', 'Amount']
+    const header = ['Date', 'Category', 'Place', 'Note', 'Amount', 'Split With', 'Your Share']
     const rows = monthExpenses.map((expense) => [
       expense.date,
       CATEGORY_MAP[expense.category]?.label || expense.category,
       expense.place,
       expense.note,
       expense.amount,
+      expense.isSplit ? expense.splitWith.join('; ') : '',
+      expense.shareAmount ?? expense.amount,
     ])
 
     const csv = [header, ...rows].map((row) => row.map(csvField).join(',')).join('\n')
@@ -318,6 +327,13 @@ function MoneyTrackerPage() {
             value={form.amount}
             onChange={(event) => updateForm('amount', event.target.value)}
           />
+          <SplitExpenseFields
+            amount={form.amount}
+            isSplit={form.isSplit}
+            onToggleSplit={(value) => updateForm('isSplit', value)}
+            splitWith={form.splitWith}
+            onChangeSplitWith={(value) => updateForm('splitWith', value)}
+          />
           <button type="submit">Add</button>
         </form>
         {formError && <p className="money-form-error">{formError}</p>}
@@ -352,13 +368,14 @@ function MoneyTrackerPage() {
                 <th>Place</th>
                 <th>Note</th>
                 <th>Amount</th>
+                <th>Your Share</th>
                 <th className="no-print">Action</th>
               </tr>
             </thead>
             <tbody>
               {monthExpenses.length === 0 && (
                 <tr>
-                  <td colSpan={6}>No expenses logged for this month yet.</td>
+                  <td colSpan={7}>No expenses logged for this month yet.</td>
                 </tr>
               )}
               {monthExpenses.map((expense) => (
@@ -368,6 +385,12 @@ function MoneyTrackerPage() {
                   <td>{expense.place || '-'}</td>
                   <td>{expense.note || '-'}</td>
                   <td>{asCurrency(expense.amount)}</td>
+                  <td>
+                    {asCurrency(expense.shareAmount ?? expense.amount)}
+                    {expense.isSplit && expense.splitWith?.length > 0 && (
+                      <span className="money-split-note">Split with {expense.splitWith.join(', ')}</span>
+                    )}
+                  </td>
                   <td className="no-print">
                     <button
                       type="button"

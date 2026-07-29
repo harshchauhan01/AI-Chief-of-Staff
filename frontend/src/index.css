@@ -2023,6 +2023,91 @@ button:hover {
   font-variant-numeric: tabular-nums;
 }
 
+.money-split-note {
+  display: block;
+  color: var(--muted);
+  font-size: 0.78rem;
+  margin-top: 2px;
+}
+
+.split-fields {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 8px;
+}
+
+.split-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  font-size: 0.9rem;
+}
+
+.split-toggle input {
+  flex: none;
+  width: auto;
+}
+
+.split-people {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.6);
+  padding: 10px;
+}
+
+.split-people-add {
+  display: flex;
+  gap: 8px;
+}
+
+.split-people-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.split-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #d5ddd8;
+  border-radius: 999px;
+  padding: 5px 6px 5px 10px;
+  background: #f4fbf9;
+  font-size: 0.85rem;
+}
+
+.split-chip button {
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  padding: 0 4px;
+  line-height: 1;
+  font-size: 1rem;
+}
+
+.split-chip button:hover {
+  transform: none;
+  box-shadow: none;
+  color: var(--danger);
+}
+
+.split-share-preview {
+  margin: 0;
+  color: var(--brand-strong);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.quick-add-split-note {
+  margin: -4px 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
 @media (max-width: 900px) {
   .money-stat-row {
     grid-template-columns: 1fr;
