@@ -34,6 +34,7 @@ const navItems = [
   { to: '/daily-plan', label: 'Daily Plan' },
   { to: '/decision-helper', label: 'Decision Helper' },
   { to: '/bill-calculator', label: 'Bill Calculator' },
+  { to: '/money-tracker', label: 'Money Tracker' },
 ]
 
 const toIsoDate = (value = new Date()) => {

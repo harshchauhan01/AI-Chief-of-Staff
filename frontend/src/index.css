@@ -1655,6 +1655,287 @@ button:hover {
   }
 }
 
+.money-shell {
+  display: grid;
+  gap: 14px;
+}
+
+.money-shell,
+.money-shell > * {
+  min-width: 0;
+}
+
+.money-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.money-header h2 {
+  margin: 0 0 6px;
+}
+
+.money-header p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.money-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.money-header-actions label {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.money-stat-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.money-stat-tile {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.74);
+  padding: 14px;
+  display: grid;
+  gap: 6px;
+}
+
+.money-stat-tile span {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.money-stat-tile strong {
+  font-size: 1.3rem;
+}
+
+.money-stat-tile.warning strong {
+  color: var(--danger);
+}
+
+.money-budget-card,
+.money-add-card,
+.money-chart-card,
+.money-table-card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.74);
+  padding: 14px;
+}
+
+.money-add-card h3,
+.money-table-card h3 {
+  margin: 0 0 10px;
+}
+
+.money-budget-form {
+  display: grid;
+  gap: 8px;
+}
+
+.money-budget-form label {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.money-budget-row {
+  display: flex;
+  gap: 8px;
+}
+
+.money-budget-row input {
+  max-width: 260px;
+}
+
+.money-inline-message {
+  margin: 0;
+  color: var(--brand-strong);
+  font-size: 0.85rem;
+}
+
+.money-add-form {
+  display: grid;
+  grid-template-columns: 160px 160px minmax(160px, 1fr) minmax(160px, 1fr) 140px auto;
+  gap: 8px;
+  align-items: start;
+}
+
+.money-form-error {
+  margin: 8px 0 0;
+  color: var(--danger);
+  font-size: 0.85rem;
+}
+
+.money-chart-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.money-chart-card-head h3 {
+  margin: 0;
+}
+
+.money-empty {
+  color: var(--muted);
+  margin: 0;
+}
+
+.money-chart {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 20px 28px;
+  align-items: start;
+}
+
+.money-donut-wrap {
+  position: relative;
+  width: 180px;
+  height: 180px;
+}
+
+.money-donut-slice {
+  cursor: pointer;
+  transition: stroke-width 0.15s ease;
+}
+
+.money-donut-slice:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.money-donut-center {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  gap: 2px;
+  pointer-events: none;
+}
+
+.money-donut-center strong {
+  font-size: 1.05rem;
+}
+
+.money-donut-center span {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.money-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+
+.money-legend-row {
+  display: grid;
+  grid-template-columns: 12px 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 8px;
+}
+
+.money-legend-row.active {
+  background: var(--brand-soft);
+}
+
+.money-legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.money-legend-amount {
+  font-weight: 600;
+}
+
+.money-legend-percent {
+  color: var(--muted);
+  font-size: 0.85rem;
+  min-width: 42px;
+  text-align: right;
+}
+
+.money-bar-list {
+  grid-column: 1 / -1;
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 12px 0 0;
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 8px;
+}
+
+.money-bar-row {
+  display: grid;
+  grid-template-columns: 120px 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.money-bar-track {
+  height: 10px;
+  border-radius: 999px;
+  background: #efece2;
+  overflow: hidden;
+}
+
+.money-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+
+.money-bar-value {
+  min-width: 90px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 900px) {
+  .money-stat-row {
+    grid-template-columns: 1fr;
+  }
+
+  .money-add-form {
+    grid-template-columns: 1fr;
+  }
+
+  .money-budget-row {
+    flex-direction: column;
+  }
+
+  .money-budget-row input {
+    max-width: none;
+  }
+
+  .money-chart {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+
+  .money-bar-row {
+    grid-template-columns: 90px 1fr auto;
+  }
+}
+
 @media print {
   .top-nav,
   .sidebar,

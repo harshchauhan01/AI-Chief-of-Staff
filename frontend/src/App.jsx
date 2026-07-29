@@ -7,6 +7,7 @@ import DecisionHelperPage from './pages/DecisionHelperPage'
 import BillCalculatorPage from './pages/BillCalculatorPage'
 import GoalsPage from './pages/GoalsPage'
 import LoginPage from './pages/LoginPage'
+import MoneyTrackerPage from './pages/MoneyTrackerPage'
 import RegisterPage from './pages/RegisterPage'
 import RoutineProgressPage from './pages/RoutineProgressPage'
 import RoutineTrackerPage from './pages/RoutineTrackerPage'
@@ -27,6 +28,7 @@ function App() {
           <Route path="/daily-plan" element={<DailyPlanPage />} />
           <Route path="/decision-helper" element={<DecisionHelperPage />} />
           <Route path="/bill-calculator" element={<BillCalculatorPage />} />
+          <Route path="/money-tracker" element={<MoneyTrackerPage />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

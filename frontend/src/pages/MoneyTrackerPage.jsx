@@ -1,0 +1,366 @@
+import { useEffect, useMemo, useState } from 'react'
+import CategoryBreakdownChart from '../components/CategoryBreakdownChart'
+import { CATEGORIES, CATEGORY_MAP } from '../constants/moneyCategories'
+
+const MONEY_STORAGE_KEY = 'orion-money-tracker:v1'
+
+const asCurrency = (value) =>
+  new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value)
+
+const toNumber = (value) => {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+const todayIso = () => {
+  const date = new Date()
+  const yyyy = date.getFullYear()
+  const mm = String(date.getMonth() + 1).padStart(2, '0')
+  const dd = String(date.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
+const currentMonthIso = () => todayIso().slice(0, 7)
+
+const formatMonthLabel = (monthIso) => {
+  const [year, month] = monthIso.split('-').map(Number)
+  if (!year || !month) {
+    return monthIso
+  }
+  return new Date(year, month - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+}
+
+const csvField = (value) => {
+  const str = String(value ?? '')
+  if (/[",\n]/.test(str)) {
+    return `"${str.replace(/"/g, '""')}"`
+  }
+  return str
+}
+
+const emptyState = () => ({ budgets: {}, expenses: [], nextId: 1 })
+
+const loadState = () => {
+  if (typeof window === 'undefined') {
+    return emptyState()
+  }
+
+  const raw = localStorage.getItem(MONEY_STORAGE_KEY)
+  if (!raw) {
+    return emptyState()
+  }
+
+  try {
+    const parsed = JSON.parse(raw)
+    return {
+      budgets: parsed && typeof parsed.budgets === 'object' && parsed.budgets !== null ? parsed.budgets : {},
+      expenses: Array.isArray(parsed?.expenses) ? parsed.expenses : [],
+      nextId: Number.isFinite(Number(parsed?.nextId)) ? Number(parsed.nextId) : 1,
+    }
+  } catch {
+    return emptyState()
+  }
+}
+
+function MoneyTrackerPage() {
+  const initial = useMemo(() => loadState(), [])
+
+  const [budgets, setBudgets] = useState(initial.budgets)
+  const [expenses, setExpenses] = useState(initial.expenses)
+  const [nextId, setNextId] = useState(initial.nextId)
+
+  const [selectedMonth, setSelectedMonth] = useState(() => currentMonthIso())
+  const [budgetInput, setBudgetInput] = useState('')
+  const [budgetMessage, setBudgetMessage] = useState('')
+
+  const [form, setForm] = useState(() => ({
+    date: todayIso(),
+    category: CATEGORIES[0].value,
+    place: '',
+    note: '',
+    amount: '',
+  }))
+  const [formError, setFormError] = useState('')
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+    localStorage.setItem(MONEY_STORAGE_KEY, JSON.stringify({ budgets, expenses, nextId }))
+  }, [budgets, expenses, nextId])
+
+  useEffect(() => {
+    setBudgetInput(budgets[selectedMonth] !== undefined ? String(budgets[selectedMonth]) : '')
+  }, [selectedMonth, budgets])
+
+  const monthOptions = useMemo(() => {
+    const months = new Set([currentMonthIso(), ...Object.keys(budgets), ...expenses.map((expense) => expense.month)])
+    return Array.from(months).sort((a, b) => b.localeCompare(a))
+  }, [budgets, expenses])
+
+  const monthExpenses = useMemo(
+    () =>
+      expenses
+        .filter((expense) => expense.month === selectedMonth)
+        .sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id),
+    [expenses, selectedMonth],
+  )
+
+  const totalMoney = toNumber(budgets[selectedMonth])
+  const totalSpent = useMemo(
+    () => monthExpenses.reduce((sum, expense) => sum + toNumber(expense.amount), 0),
+    [monthExpenses],
+  )
+  const remaining = totalMoney - totalSpent
+
+  const categoryBreakdown = useMemo(() => {
+    const totals = new Map()
+    for (const expense of monthExpenses) {
+      const amount = toNumber(expense.amount)
+      if (amount <= 0) {
+        continue
+      }
+      totals.set(expense.category, (totals.get(expense.category) || 0) + amount)
+    }
+
+    return Array.from(totals.entries())
+      .map(([value, amount]) => {
+        const meta = CATEGORY_MAP[value] || CATEGORY_MAP.other
+        return { category: value, label: meta.label, color: meta.color, amount }
+      })
+      .sort((a, b) => b.amount - a.amount)
+  }, [monthExpenses])
+
+  const saveBudget = (event) => {
+    event.preventDefault()
+    const amount = toNumber(budgetInput)
+    setBudgets((current) => ({ ...current, [selectedMonth]: amount }))
+    setBudgetMessage('Saved.')
+    window.setTimeout(() => setBudgetMessage(''), 1500)
+  }
+
+  const updateForm = (field, value) => {
+    setForm((current) => ({ ...current, [field]: value }))
+  }
+
+  const addExpense = (event) => {
+    event.preventDefault()
+
+    if (!form.date) {
+      setFormError('Pick a date.')
+      return
+    }
+
+    const amount = toNumber(form.amount)
+    if (amount <= 0) {
+      setFormError('Enter an amount greater than 0.')
+      return
+    }
+
+    const expense = {
+      id: nextId,
+      date: form.date,
+      month: form.date.slice(0, 7),
+      category: form.category,
+      place: form.place.trim(),
+      note: form.note.trim(),
+      amount,
+    }
+
+    setExpenses((current) => [expense, ...current])
+    setNextId((current) => current + 1)
+    setFormError('')
+    setForm((current) => ({ ...current, place: '', note: '', amount: '' }))
+    setSelectedMonth(expense.month)
+  }
+
+  const removeExpense = (id) => {
+    setExpenses((current) => current.filter((expense) => expense.id !== id))
+  }
+
+  const downloadCsv = () => {
+    const header = ['Date', 'Category', 'Place', 'Note', 'Amount']
+    const rows = monthExpenses.map((expense) => [
+      expense.date,
+      CATEGORY_MAP[expense.category]?.label || expense.category,
+      expense.place,
+      expense.note,
+      expense.amount,
+    ])
+
+    const csv = [header, ...rows].map((row) => row.map(csvField).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `orion-expenses-${selectedMonth}.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
+  return (
+    <section className="panel money-shell">
+      <div className="money-header">
+        <div>
+          <h2>Money Tracker</h2>
+          <p>Add what you have, log every spend, and see the breakdown for any month.</p>
+        </div>
+        <div className="money-header-actions no-print">
+          <label htmlFor="money_month_select">Month</label>
+          <select id="money_month_select" value={selectedMonth} onChange={(event) => setSelectedMonth(event.target.value)}>
+            {monthOptions.map((month) => (
+              <option key={month} value={month}>
+                {formatMonthLabel(month)}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="money-stat-row">
+        <article className="money-stat-tile">
+          <span>Total money</span>
+          <strong>{asCurrency(totalMoney)}</strong>
+        </article>
+        <article className="money-stat-tile">
+          <span>Spent this month</span>
+          <strong>{asCurrency(totalSpent)}</strong>
+        </article>
+        <article className={remaining < 0 ? 'money-stat-tile warning' : 'money-stat-tile'}>
+          <span>Remaining</span>
+          <strong>{asCurrency(remaining)}</strong>
+        </article>
+      </div>
+
+      <article className="money-budget-card no-print">
+        <form className="money-budget-form" onSubmit={saveBudget}>
+          <label htmlFor="money_budget_input">Money you have for {formatMonthLabel(selectedMonth)}</label>
+          <div className="money-budget-row">
+            <input
+              id="money_budget_input"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="0.00"
+              value={budgetInput}
+              onChange={(event) => setBudgetInput(event.target.value)}
+            />
+            <button type="submit">Save</button>
+          </div>
+          {budgetMessage && <p className="money-inline-message">{budgetMessage}</p>}
+        </form>
+      </article>
+
+      <article className="money-add-card no-print">
+        <h3>Add an expense</h3>
+        <form className="money-add-form" onSubmit={addExpense}>
+          <input
+            type="date"
+            value={form.date}
+            onChange={(event) => updateForm('date', event.target.value)}
+            required
+          />
+          <select value={form.category} onChange={(event) => updateForm('category', event.target.value)}>
+            {CATEGORIES.map((category) => (
+              <option key={category.value} value={category.value}>
+                {category.label}
+              </option>
+            ))}
+          </select>
+          <input
+            type="text"
+            placeholder="Place (e.g. groceries)"
+            value={form.place}
+            onChange={(event) => updateForm('place', event.target.value)}
+          />
+          <input
+            type="text"
+            placeholder="Note (optional)"
+            value={form.note}
+            onChange={(event) => updateForm('note', event.target.value)}
+          />
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="Amount"
+            value={form.amount}
+            onChange={(event) => updateForm('amount', event.target.value)}
+          />
+          <button type="submit">Add</button>
+        </form>
+        {formError && <p className="money-form-error">{formError}</p>}
+      </article>
+
+      <article className="money-chart-card">
+        <div className="money-chart-card-head">
+          <h3>Spending by category</h3>
+          <button
+            type="button"
+            className="secondary-btn no-print"
+            onClick={downloadCsv}
+            disabled={monthExpenses.length === 0}
+          >
+            Download CSV
+          </button>
+          <button type="button" className="secondary-btn no-print" onClick={() => window.print()}>
+            Download PDF
+          </button>
+        </div>
+        <CategoryBreakdownChart items={categoryBreakdown} total={totalSpent} />
+      </article>
+
+      <article className="money-table-card">
+        <h3>Expenses — {formatMonthLabel(selectedMonth)}</h3>
+        <div className="bill-table-wrap">
+          <table className="bill-table" aria-label="Expense table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Category</th>
+                <th>Place</th>
+                <th>Note</th>
+                <th>Amount</th>
+                <th className="no-print">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {monthExpenses.length === 0 && (
+                <tr>
+                  <td colSpan={6}>No expenses logged for this month yet.</td>
+                </tr>
+              )}
+              {monthExpenses.map((expense) => (
+                <tr key={expense.id}>
+                  <td>{expense.date}</td>
+                  <td>{CATEGORY_MAP[expense.category]?.label || expense.category}</td>
+                  <td>{expense.place || '-'}</td>
+                  <td>{expense.note || '-'}</td>
+                  <td>{asCurrency(expense.amount)}</td>
+                  <td className="no-print">
+                    <button
+                      type="button"
+                      className="secondary-btn danger-btn"
+                      onClick={() => removeExpense(expense.id)}
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+  )
+}
+
+export default MoneyTrackerPage
