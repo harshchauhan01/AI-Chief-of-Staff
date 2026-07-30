@@ -1,6 +1,29 @@
 const CACHE_NAME = 'orion-shell-v2'
 const APP_SHELL = ['/', '/manifest.webmanifest', '/orion-app-icon.svg', '/orion-wordmark.svg']
 
+// Mirrored in src/services/quickAddNotification.js.
+const QUICK_ADD_TAG = 'orion-quick-add'
+const QUICK_ADD_STATE_CACHE = 'orion-quick-add-state:v1'
+const QUICK_ADD_STATE_KEY = '/__orion-quick-add-enabled'
+
+const isQuickAddEnabled = async () => {
+  const cache = await caches.open(QUICK_ADD_STATE_CACHE)
+  const match = await cache.match(QUICK_ADD_STATE_KEY)
+  return Boolean(match)
+}
+
+const showQuickAddNotification = () =>
+  self.registration.showNotification('Orion — Quick Add', {
+    body: 'Tap to log an expense.',
+    icon: '/orion-app-icon.svg?v=2',
+    badge: '/orion-app-icon.svg?v=2',
+    tag: QUICK_ADD_TAG,
+    requireInteraction: true,
+    silent: true,
+    data: { url: '/quick-add' },
+    actions: [{ action: 'quick-add', title: 'Add expense' }],
+  })
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)),
@@ -82,6 +105,25 @@ self.addEventListener('notificationclick', (event) => {
         return clients.openWindow(targetUrl)
       }
 
+      return undefined
+    }),
+  )
+})
+
+// Keep the Quick Add notification pinned: if the user swipes it away (or it
+// closes for any other reason) while still enabled, re-post it immediately.
+// The only way to actually clear it is the in-app Disable action, which
+// removes the QUICK_ADD_STATE_CACHE marker before closing the notification.
+self.addEventListener('notificationclose', (event) => {
+  if (event.notification.tag !== QUICK_ADD_TAG) {
+    return
+  }
+
+  event.waitUntil(
+    isQuickAddEnabled().then((enabled) => {
+      if (enabled) {
+        return showQuickAddNotification()
+      }
       return undefined
     }),
   )

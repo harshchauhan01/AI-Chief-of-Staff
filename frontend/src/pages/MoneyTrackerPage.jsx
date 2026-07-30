@@ -11,7 +11,7 @@ import {
   disableQuickAddNotification,
   enableQuickAddNotification,
   getQuickAddNotificationStatus,
-  refreshQuickAddNotificationIfEnabled,
+  startQuickAddNotificationWatch,
 } from '../services/quickAddNotification'
 
 const csvField = (value) => {
@@ -52,7 +52,8 @@ function MoneyTrackerPage() {
   }, [budgets, expenses, nextId])
 
   useEffect(() => {
-    refreshQuickAddNotificationIfEnabled()
+    const stopWatching = startQuickAddNotificationWatch()
+    return stopWatching
   }, [])
 
   useEffect(() => {
