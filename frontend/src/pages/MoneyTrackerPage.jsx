@@ -6,7 +6,7 @@ import { SHARE_DRAFT_STORAGE_KEY } from '../constants/shareTarget'
 import { parseSharedExpenseText } from '../utils/parseSharedExpense'
 import { asCurrency, currentMonthIso, formatMonthLabel, todayIso, toNumber } from '../utils/money'
 import { loadMoneyState, saveMoneyState } from '../utils/moneyStore'
-import { computeShareAmount } from '../utils/splitShare'
+import { computeShareAmount, computeSpendAmount } from '../utils/splitShare'
 import {
   disableQuickAddNotification,
   enableQuickAddNotification,
@@ -101,7 +101,7 @@ function MoneyTrackerPage() {
 
   const totalMoney = toNumber(budgets[selectedMonth])
   const totalSpent = useMemo(
-    () => monthExpenses.reduce((sum, expense) => sum + toNumber(expense.shareAmount ?? expense.amount), 0),
+    () => monthExpenses.reduce((sum, expense) => sum + computeSpendAmount(expense), 0),
     [monthExpenses],
   )
   const remaining = totalMoney - totalSpent
@@ -109,7 +109,7 @@ function MoneyTrackerPage() {
   const categoryBreakdown = useMemo(() => {
     const totals = new Map()
     for (const expense of monthExpenses) {
-      const amount = toNumber(expense.shareAmount ?? expense.amount)
+      const amount = computeSpendAmount(expense)
       if (amount <= 0) {
         continue
       }
@@ -123,6 +123,25 @@ function MoneyTrackerPage() {
       })
       .sort((a, b) => b.amount - a.amount)
   }, [monthExpenses])
+
+  const isCurrentMonth = selectedMonth === currentMonthIso()
+  const daysInSelectedMonth = useMemo(() => {
+    const [year, month] = selectedMonth.split('-').map(Number)
+    return new Date(year, month, 0).getDate()
+  }, [selectedMonth])
+
+  // Projection is noisy on day 1-2 (one expense can swing it wildly), so hold
+  // off showing a pace read until there's at least a few days of signal.
+  const spendPace = useMemo(() => {
+    const dayOfMonth = new Date().getDate()
+    if (!isCurrentMonth || totalMoney <= 0 || dayOfMonth < 3) {
+      return null
+    }
+
+    const projected = (totalSpent / dayOfMonth) * daysInSelectedMonth
+    const percentOfBudget = (projected / totalMoney) * 100
+    return { projected, percentOfBudget, dayOfMonth }
+  }, [isCurrentMonth, totalMoney, totalSpent, daysInSelectedMonth])
 
   const saveBudget = (event) => {
     event.preventDefault()
@@ -161,6 +180,7 @@ function MoneyTrackerPage() {
       isSplit: form.isSplit,
       splitWith: form.isSplit ? form.splitWith : [],
       shareAmount: computeShareAmount(amount, form.isSplit, form.splitWith),
+      settled: false,
     }
 
     setExpenses((current) => [expense, ...current])
@@ -174,8 +194,14 @@ function MoneyTrackerPage() {
     setExpenses((current) => current.filter((expense) => expense.id !== id))
   }
 
+  const toggleSettled = (id) => {
+    setExpenses((current) =>
+      current.map((expense) => (expense.id === id ? { ...expense, settled: !expense.settled } : expense)),
+    )
+  }
+
   const downloadCsv = () => {
-    const header = ['Date', 'Category', 'Place', 'Note', 'Amount', 'Split With', 'Your Share']
+    const header = ['Date', 'Category', 'Place', 'Note', 'Amount', 'Split With', 'Your Share', 'Settled']
     const rows = monthExpenses.map((expense) => [
       expense.date,
       CATEGORY_MAP[expense.category]?.label || expense.category,
@@ -184,6 +210,7 @@ function MoneyTrackerPage() {
       expense.amount,
       expense.isSplit ? expense.splitWith.join('; ') : '',
       expense.shareAmount ?? expense.amount,
+      expense.isSplit ? (expense.settled ? 'Yes' : 'No') : '',
     ])
 
     const csv = [header, ...rows].map((row) => row.map(csvField).join(',')).join('\n')
@@ -264,6 +291,24 @@ function MoneyTrackerPage() {
           <strong>{asCurrency(remaining)}</strong>
         </article>
       </div>
+
+      {spendPace && (
+        <p
+          className={
+            spendPace.percentOfBudget > 110
+              ? 'money-pace-note over'
+              : spendPace.percentOfBudget > 90
+                ? 'money-pace-note warn'
+                : 'money-pace-note ok'
+          }
+        >
+          At this pace (day {spendPace.dayOfMonth} of {daysInSelectedMonth}), you're on track to spend{' '}
+          {asCurrency(spendPace.projected)} this month
+          {spendPace.percentOfBudget > 100
+            ? ` — ${asCurrency(spendPace.projected - totalMoney)} over your ${asCurrency(totalMoney)} budget.`
+            : ` — within your ${asCurrency(totalMoney)} budget.`}
+        </p>
+      )}
 
       <article className="money-budget-card no-print">
         <form className="money-budget-form" onSubmit={saveBudget}>
@@ -370,13 +415,14 @@ function MoneyTrackerPage() {
                 <th>Note</th>
                 <th>Amount</th>
                 <th>Your Share</th>
+                <th>Settled</th>
                 <th className="no-print">Action</th>
               </tr>
             </thead>
             <tbody>
               {monthExpenses.length === 0 && (
                 <tr>
-                  <td colSpan={7}>No expenses logged for this month yet.</td>
+                  <td colSpan={8}>No expenses logged for this month yet.</td>
                 </tr>
               )}
               {monthExpenses.map((expense) => (
@@ -390,6 +436,29 @@ function MoneyTrackerPage() {
                     {asCurrency(expense.shareAmount ?? expense.amount)}
                     {expense.isSplit && expense.splitWith?.length > 0 && (
                       <span className="money-split-note">Split with {expense.splitWith.join(', ')}</span>
+                    )}
+                    {expense.isSplit && !expense.settled && (
+                      <span className="money-split-note pending">
+                        Counted as full {asCurrency(expense.amount)} until settled
+                      </span>
+                    )}
+                  </td>
+                  <td>
+                    {expense.isSplit ? (
+                      <>
+                        <span className={expense.settled ? 'money-settled-badge settled' : 'money-settled-badge pending'}>
+                          {expense.settled ? 'Settled' : 'Pending'}
+                        </span>
+                        <button
+                          type="button"
+                          className="secondary-btn no-print money-settle-toggle"
+                          onClick={() => toggleSettled(expense.id)}
+                        >
+                          {expense.settled ? 'Mark unsettled' : 'Mark settled'}
+                        </button>
+                      </>
+                    ) : (
+                      '-'
                     )}
                   </td>
                   <td className="no-print">

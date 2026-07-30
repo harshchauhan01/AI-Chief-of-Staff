@@ -125,6 +125,7 @@ function QuickAddExpensePage() {
       isSplit: form.isSplit,
       splitWith: form.isSplit ? form.splitWith : [],
       shareAmount: computeShareAmount(amount, form.isSplit, form.splitWith),
+      settled: false,
     })
 
     setLastSaved(saved)
