@@ -29,5 +29,33 @@
       "text": "share_text",
       "url": "share_url"
     }
-  }
+  },
+  "shortcuts": [
+    {
+      "name": "Add Expense",
+      "short_name": "Add Expense",
+      "description": "Quickly log a new expense",
+      "url": "/quick-add",
+      "icons": [
+        {
+          "src": "/orion-app-icon.svg?v=2",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Money Tracker",
+      "short_name": "Money Tracker",
+      "description": "View this month's spending",
+      "url": "/money-tracker",
+      "icons": [
+        {
+          "src": "/orion-app-icon.svg?v=2",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  ]
 }
