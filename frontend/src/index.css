@@ -1655,13 +1655,16 @@ button:hover {
   }
 }
 
-.money-shell {
+.money-shell,
+.settings-shell {
   display: grid;
   gap: 14px;
 }
 
 .money-shell,
-.money-shell > * {
+.money-shell > *,
+.settings-shell,
+.settings-shell > * {
   min-width: 0;
 }
 
@@ -1724,7 +1727,10 @@ button:hover {
 .money-budget-card,
 .money-add-card,
 .money-chart-card,
-.money-table-card {
+.money-table-card,
+.money-recurring-card,
+.money-recurring-prompt,
+.money-buckets-card {
   border: 1px solid var(--border);
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.74);
@@ -1763,9 +1769,14 @@ button:hover {
 
 .money-add-form {
   display: grid;
-  grid-template-columns: 160px 160px minmax(160px, 1fr) minmax(160px, 1fr) 140px auto;
+  grid-template-columns: 160px 160px minmax(160px, 1fr) minmax(160px, 1fr) 140px 160px auto;
   gap: 8px;
   align-items: start;
+}
+
+.money-add-form-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .money-form-error {
@@ -1794,6 +1805,139 @@ button:hover {
   padding: 4px 10px;
   font-size: 0.78rem;
   flex-shrink: 0;
+}
+
+.money-template-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+
+.money-recurring-list {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.money-recurring-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+}
+
+.money-recurring-form {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) 160px 140px 90px auto;
+  gap: 8px;
+  align-items: start;
+}
+
+.money-recurring-prompt {
+  margin-bottom: 16px;
+}
+
+.money-recurring-prompt-list {
+  list-style: none;
+  margin: 10px 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.money-recurring-prompt-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.money-recurring-prompt-list input {
+  max-width: 140px;
+}
+
+.money-recurring-prompt-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.settings-status-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 4px 0 4px;
+}
+
+.settings-shell .sidebar-install-card,
+.settings-shell .sidebar-reminder-card {
+  max-width: 560px;
+}
+
+.settings-shell .sidebar-install-btn {
+  max-width: 220px;
+}
+
+.money-bucket-list {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.money-bucket-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.money-bucket-amount {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.money-bucket-amount.over {
+  color: var(--danger);
+}
+
+.money-bucket-progress {
+  margin-top: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.money-bucket-progress-fill {
+  height: 100%;
+  background: var(--brand);
+}
+
+.money-bucket-progress-fill.over {
+  background: var(--danger);
+}
+
+.money-bucket-form {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) 160px auto;
+  gap: 8px;
+  align-items: start;
+}
+
+.money-bucket-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--brand-soft);
+  color: #114936;
+  font-size: 0.76rem;
+  font-weight: 600;
 }
 
 .money-quickadd-row {

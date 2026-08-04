@@ -1,4 +1,4 @@
-import { toNumber } from './money'
+import { toNumber } from './money.js'
 
 // Equal split: the total amount divided across the people it's split with,
 // plus you. Used identically by MoneyTrackerPage, QuickAddExpensePage, and

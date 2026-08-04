@@ -3,6 +3,8 @@
 // Each phrases it differently ("paid ₹X to Y", "Rs.X sent to Y", "X debited
 // towards Y"), so these patterns key off the common pieces (an amount near a
 // currency marker, a name after to/at/towards) rather than one app's wording.
+import { guessCategoryFromPlace } from '../constants/moneyCategories'
+
 const AMOUNT_PATTERNS = [
   /₹\s*([\d,]+(?:\.\d{1,2})?)/,
   /(?:inr|rs\.?|rupees)\s*([\d,]+(?:\.\d{1,2})?)/i,
@@ -20,7 +22,7 @@ const PLACE_PATTERNS = [
 export const parseSharedExpenseText = (rawText) => {
   const text = String(rawText || '').replace(/\s+/g, ' ').trim()
   if (!text) {
-    return { amount: '', place: '' }
+    return { amount: '', place: '', category: '' }
   }
 
   let amount = ''
@@ -41,5 +43,5 @@ export const parseSharedExpenseText = (rawText) => {
     }
   }
 
-  return { amount, place }
+  return { amount, place, category: guessCategoryFromPlace(place) }
 }

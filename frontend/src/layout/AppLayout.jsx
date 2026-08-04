@@ -1,10 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import api from '../api/client'
 import TopNav from '../components/TopNav'
 import {
   createReminder,
-  formatReminderDueAt,
   getDueRoutineAlerts,
   getDueTaskReminders,
   getNotificationPermission,
@@ -35,6 +34,7 @@ const navItems = [
   { to: '/decision-helper', label: 'Decision Helper' },
   { to: '/bill-calculator', label: 'Bill Calculator' },
   { to: '/money-tracker', label: 'Money Tracker' },
+  { to: '/settings', label: 'Settings' },
 ]
 
 const toIsoDate = (value = new Date()) => {
@@ -314,8 +314,6 @@ function AppLayout() {
 
   const closeMobileNav = () => setIsMobileNavOpen(false)
 
-  const reminderPreview = getPendingReminders(reminders).slice(0, 3)
-
   const handleReminderFieldChange = (field, value) => {
     setReminderForm((current) => ({
       ...current,
@@ -409,6 +407,23 @@ function AppLayout() {
     navigate('/login')
   }
 
+  const settingsContext = useMemo(
+    () => ({
+      isOffline,
+      reminderPermission,
+      handleEnableNotifications,
+      installMessage,
+      handleInstallApp,
+      reminders,
+      reminderForm,
+      handleReminderFieldChange,
+      handleCreateReminder,
+      reminderMessage,
+      deleteReminder,
+    }),
+    [isOffline, reminderPermission, installMessage, reminders, reminderForm, reminderMessage],
+  )
+
   return (
     <>
       <TopNav
@@ -451,113 +466,14 @@ function AppLayout() {
               ))}
             </nav>
           </div>
-          <div className="sidebar-status-block">
-            <div className={isOffline ? 'sidebar-status-pill offline' : 'sidebar-status-pill online'}>
-              {isOffline ? 'Offline mode' : 'Online mode'}
-            </div>
-            <div
-              className={
-                reminderPermission === 'granted'
-                  ? 'sidebar-status-pill reminder granted'
-                  : reminderPermission === 'denied'
-                    ? 'sidebar-status-pill reminder blocked'
-                    : 'sidebar-status-pill reminder prompt'
-              }
-            >
-              {reminderPermission === 'granted'
-                ? 'Notifications enabled'
-                : reminderPermission === 'denied'
-                  ? 'Notifications blocked'
-                  : reminderPermission === 'unsupported'
-                    ? 'Notifications unsupported'
-                    : 'Notifications available'}
-            </div>
-            <div className="sidebar-install-card">
-              <div>
-                <h2>Mobile app</h2>
-                <p>Keep Orion on your home screen for quick access.</p>
-              </div>
-              <button type="button" className="sidebar-install-btn" onClick={handleInstallApp}>
-                Install app
-              </button>
-              {installMessage && <p className="sidebar-install-note">{installMessage}</p>}
-            </div>
-            <div className="sidebar-reminder-card">
-              <div className="sidebar-reminder-header">
-                <div>
-                  <h2>Reminders</h2>
-                  <p>Schedule a reminder for a specific time or after a delay.</p>
-                </div>
-                <button type="button" className="sidebar-reminder-permission-btn" onClick={handleEnableNotifications}>
-                  Enable
-                </button>
-              </div>
-
-              <form className="sidebar-reminder-form" onSubmit={handleCreateReminder}>
-                <input
-                  type="text"
-                  placeholder="Reminder title"
-                  value={reminderForm.title}
-                  onChange={(event) => handleReminderFieldChange('title', event.target.value)}
-                  required
-                />
-                <select
-                  value={reminderForm.mode}
-                  onChange={(event) => handleReminderFieldChange('mode', event.target.value)}
-                >
-                  <option value="exact">At a specific time</option>
-                  <option value="delay">After a delay</option>
-                </select>
-                {reminderForm.mode === 'exact' ? (
-                  <input
-                    type="datetime-local"
-                    value={reminderForm.reminderAt}
-                    onChange={(event) => handleReminderFieldChange('reminderAt', event.target.value)}
-                  />
-                ) : (
-                  <input
-                    type="number"
-                    min="1"
-                    placeholder="Minutes from now"
-                    value={reminderForm.minutesFromNow}
-                    onChange={(event) => handleReminderFieldChange('minutesFromNow', event.target.value)}
-                  />
-                )}
-                <button type="submit" className="sidebar-reminder-submit-btn">
-                  Add reminder
-                </button>
-              </form>
-
-              {reminderMessage && <p className="sidebar-reminder-note">{reminderMessage}</p>}
-
-              <div className="sidebar-reminder-list">
-                {reminderPreview.length === 0 && <p className="sidebar-reminder-empty">No reminders yet.</p>}
-                {reminderPreview.map((reminder) => (
-                  <article key={reminder.id} className="sidebar-reminder-item">
-                    <div>
-                      <strong>{reminder.title}</strong>
-                      <p>{formatReminderDueAt(reminder.dueAt)}</p>
-                    </div>
-                    <button
-                      type="button"
-                      className="sidebar-reminder-delete-btn"
-                      onClick={() => deleteReminder(reminder.id)}
-                    >
-                      Remove
-                    </button>
-                  </article>
-                ))}
-              </div>
-            </div>
-            <div className="sidebar-footer">
-              <button type="button" className="sidebar-logout-btn" onClick={logout}>
-                Logout
-              </button>
-            </div>
+          <div className="sidebar-footer">
+            <button type="button" className="sidebar-logout-btn" onClick={logout}>
+              Logout
+            </button>
           </div>
         </aside>
         <main className="content">
-          <Outlet />
+          <Outlet context={settingsContext} />
         </main>
       </div>
     </>

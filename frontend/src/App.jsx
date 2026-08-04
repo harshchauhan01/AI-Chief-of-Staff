@@ -12,6 +12,7 @@ import QuickAddExpensePage from './pages/QuickAddExpensePage'
 import RegisterPage from './pages/RegisterPage'
 import RoutineProgressPage from './pages/RoutineProgressPage'
 import RoutineTrackerPage from './pages/RoutineTrackerPage'
+import SettingsPage from './pages/SettingsPage'
 import TasksPage from './pages/TasksPage'
 
 function App() {
@@ -30,6 +31,7 @@ function App() {
           <Route path="/decision-helper" element={<DecisionHelperPage />} />
           <Route path="/bill-calculator" element={<BillCalculatorPage />} />
           <Route path="/money-tracker" element={<MoneyTrackerPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
         </Route>
         <Route path="/quick-add" element={<QuickAddExpensePage />} />
       </Route>

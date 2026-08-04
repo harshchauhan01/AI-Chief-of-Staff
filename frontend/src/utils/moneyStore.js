@@ -1,6 +1,6 @@
 export const MONEY_STORAGE_KEY = 'orion-money-tracker:v1'
 
-const emptyState = () => ({ budgets: {}, expenses: [], nextId: 1 })
+const emptyState = () => ({ budgets: {}, expenses: [], nextId: 1, recurringExpenses: [], buckets: [] })
 
 export const loadMoneyState = () => {
   if (typeof window === 'undefined') {
@@ -18,6 +18,8 @@ export const loadMoneyState = () => {
       budgets: parsed && typeof parsed.budgets === 'object' && parsed.budgets !== null ? parsed.budgets : {},
       expenses: Array.isArray(parsed?.expenses) ? parsed.expenses : [],
       nextId: Number.isFinite(Number(parsed?.nextId)) ? Number(parsed.nextId) : 1,
+      recurringExpenses: Array.isArray(parsed?.recurringExpenses) ? parsed.recurringExpenses : [],
+      buckets: Array.isArray(parsed?.buckets) ? parsed.buckets : [],
     }
   } catch {
     return emptyState()

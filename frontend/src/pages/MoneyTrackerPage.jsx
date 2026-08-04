@@ -1,12 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
+import BucketsCard from '../components/BucketsCard'
 import CategoryBreakdownChart from '../components/CategoryBreakdownChart'
+import DailyUsageChart from '../components/DailyUsageChart'
+import QuickTemplateChips from '../components/QuickTemplateChips'
+import RecurringConfirmPrompt from '../components/RecurringConfirmPrompt'
+import RecurringExpensesCard from '../components/RecurringExpensesCard'
 import SplitExpenseFields from '../components/SplitExpenseFields'
-import { CATEGORIES, CATEGORY_MAP } from '../constants/moneyCategories'
+import { CATEGORIES, CATEGORY_MAP, guessCategoryFromPlace } from '../constants/moneyCategories'
 import { SHARE_DRAFT_STORAGE_KEY } from '../constants/shareTarget'
 import { parseSharedExpenseText } from '../utils/parseSharedExpense'
 import { asCurrency, currentMonthIso, formatMonthLabel, todayIso, toNumber } from '../utils/money'
 import { loadMoneyState, saveMoneyState } from '../utils/moneyStore'
 import { computeShareAmount, computeSpendAmount } from '../utils/splitShare'
+import { buildBucketSummaries } from '../utils/bucketSpend'
+import { buildDailyBreakdown } from '../utils/dailyBreakdown'
+import { buildQuickTemplates } from '../utils/quickTemplates'
+import { buildConfirmedExpenses, getDueRecurring, markRecurringHandled } from '../utils/recurringExpenses'
 import {
   disableQuickAddNotification,
   enableQuickAddNotification,
@@ -28,8 +37,11 @@ function MoneyTrackerPage() {
   const [budgets, setBudgets] = useState(initial.budgets)
   const [expenses, setExpenses] = useState(initial.expenses)
   const [nextId, setNextId] = useState(initial.nextId)
+  const [recurringExpenses, setRecurringExpenses] = useState(initial.recurringExpenses)
+  const [buckets, setBuckets] = useState(initial.buckets)
 
   const [selectedMonth, setSelectedMonth] = useState(() => currentMonthIso())
+  const [activeChartView, setActiveChartView] = useState('category')
   const [budgetInput, setBudgetInput] = useState('')
   const [budgetMessage, setBudgetMessage] = useState('')
 
@@ -41,15 +53,18 @@ function MoneyTrackerPage() {
     amount: '',
     isSplit: false,
     splitWith: [],
+    bucketId: '',
   }))
   const [formError, setFormError] = useState('')
+  const [categoryTouched, setCategoryTouched] = useState(false)
+  const [editingExpenseId, setEditingExpenseId] = useState(null)
   const [shareBanner, setShareBanner] = useState('')
   const [notifStatus, setNotifStatus] = useState(() => getQuickAddNotificationStatus())
   const [notifMessage, setNotifMessage] = useState('')
 
   useEffect(() => {
-    saveMoneyState({ budgets, expenses, nextId })
-  }, [budgets, expenses, nextId])
+    saveMoneyState({ budgets, expenses, nextId, recurringExpenses, buckets })
+  }, [budgets, expenses, nextId, recurringExpenses, buckets])
 
   useEffect(() => {
     const stopWatching = startQuickAddNotificationWatch()
@@ -70,11 +85,12 @@ function MoneyTrackerPage() {
         return
       }
 
-      const { amount, place } = parseSharedExpenseText(combinedText)
+      const { amount, place, category } = parseSharedExpenseText(combinedText)
       setForm((current) => ({
         ...current,
         amount: amount || current.amount,
         place: place || current.place,
+        category: category || current.category,
       }))
       setShareBanner(combinedText)
     } catch {
@@ -124,11 +140,69 @@ function MoneyTrackerPage() {
       .sort((a, b) => b.amount - a.amount)
   }, [monthExpenses])
 
+  const quickTemplates = useMemo(() => buildQuickTemplates(expenses), [expenses])
+
+  const applyTemplate = (template) => {
+    setForm((current) => ({ ...current, place: template.place, category: template.category, amount: String(template.amount) }))
+    setCategoryTouched(true)
+  }
+
   const isCurrentMonth = selectedMonth === currentMonthIso()
+  const dueRecurring = useMemo(
+    () => (isCurrentMonth ? getDueRecurring(recurringExpenses, selectedMonth) : []),
+    [isCurrentMonth, recurringExpenses, selectedMonth],
+  )
+
+  const addRecurring = (definition) => {
+    setRecurringExpenses((current) => [...current, { ...definition, id: nextId }])
+    setNextId((current) => current + 1)
+  }
+
+  const removeRecurring = (id) => {
+    setRecurringExpenses((current) => current.filter((recurring) => recurring.id !== id))
+  }
+
+  const confirmRecurring = (amounts) => {
+    const { expenses: newExpenses, nextId: updatedNextId } = buildConfirmedExpenses(
+      dueRecurring,
+      selectedMonth,
+      nextId,
+      amounts,
+    )
+    setExpenses((current) => [...newExpenses, ...current])
+    setNextId(updatedNextId)
+    setRecurringExpenses((current) => markRecurringHandled(current, selectedMonth))
+  }
+
+  const skipRecurring = () => {
+    setRecurringExpenses((current) => markRecurringHandled(current, selectedMonth))
+  }
+
+  const bucketSummaries = useMemo(() => buildBucketSummaries(buckets, expenses), [buckets, expenses])
+  const bucketMap = useMemo(() => new Map(buckets.map((bucket) => [bucket.id, bucket.name])), [buckets])
+
+  const addBucket = (definition) => {
+    setBuckets((current) => [...current, { ...definition, id: nextId }])
+    setNextId((current) => current + 1)
+  }
+
+  const removeBucket = (id) => {
+    setBuckets((current) => current.filter((bucket) => bucket.id !== id))
+  }
+
+  const updateBucket = (id, definition) => {
+    setBuckets((current) => current.map((bucket) => (bucket.id === id ? { ...bucket, ...definition } : bucket)))
+  }
+
   const daysInSelectedMonth = useMemo(() => {
     const [year, month] = selectedMonth.split('-').map(Number)
     return new Date(year, month, 0).getDate()
   }, [selectedMonth])
+
+  const dailyBreakdown = useMemo(
+    () => buildDailyBreakdown(monthExpenses, selectedMonth, daysInSelectedMonth),
+    [monthExpenses, selectedMonth, daysInSelectedMonth],
+  )
 
   // Projection is noisy on day 1-2 (one expense can swing it wildly), so hold
   // off showing a pace read until there's at least a few days of signal.
@@ -155,6 +229,53 @@ function MoneyTrackerPage() {
     setForm((current) => ({ ...current, [field]: value }))
   }
 
+  const updatePlace = (value) => {
+    setForm((current) => {
+      const guessed = categoryTouched ? current.category : guessCategoryFromPlace(value) || current.category
+      return { ...current, place: value, category: guessed }
+    })
+  }
+
+  const updateCategory = (value) => {
+    setCategoryTouched(true)
+    updateForm('category', value)
+  }
+
+  const resetExpenseForm = () => {
+    setForm((current) => ({
+      ...current,
+      place: '',
+      note: '',
+      amount: '',
+      isSplit: false,
+      splitWith: [],
+      bucketId: '',
+    }))
+    setCategoryTouched(false)
+    setEditingExpenseId(null)
+  }
+
+  const startEditExpense = (expense) => {
+    setForm({
+      date: expense.date,
+      category: expense.category,
+      place: expense.place,
+      note: expense.note,
+      amount: String(expense.amount),
+      isSplit: expense.isSplit,
+      splitWith: expense.splitWith || [],
+      bucketId: expense.bucketId ? String(expense.bucketId) : '',
+    })
+    setCategoryTouched(true)
+    setFormError('')
+    setEditingExpenseId(expense.id)
+  }
+
+  const cancelEditExpense = () => {
+    resetExpenseForm()
+    setFormError('')
+  }
+
   const addExpense = (event) => {
     event.preventDefault()
 
@@ -169,8 +290,7 @@ function MoneyTrackerPage() {
       return
     }
 
-    const expense = {
-      id: nextId,
+    const sharedFields = {
       date: form.date,
       month: form.date.slice(0, 7),
       category: form.category,
@@ -180,18 +300,33 @@ function MoneyTrackerPage() {
       isSplit: form.isSplit,
       splitWith: form.isSplit ? form.splitWith : [],
       shareAmount: computeShareAmount(amount, form.isSplit, form.splitWith),
-      settled: false,
+      bucketId: form.bucketId ? Number(form.bucketId) : null,
     }
+
+    if (editingExpenseId !== null) {
+      setExpenses((current) =>
+        current.map((expense) => (expense.id === editingExpenseId ? { ...expense, ...sharedFields } : expense)),
+      )
+      setFormError('')
+      resetExpenseForm()
+      setSelectedMonth(sharedFields.month)
+      return
+    }
+
+    const expense = { id: nextId, settled: false, ...sharedFields }
 
     setExpenses((current) => [expense, ...current])
     setNextId((current) => current + 1)
     setFormError('')
-    setForm((current) => ({ ...current, place: '', note: '', amount: '', isSplit: false, splitWith: [] }))
+    resetExpenseForm()
     setSelectedMonth(expense.month)
   }
 
   const removeExpense = (id) => {
     setExpenses((current) => current.filter((expense) => expense.id !== id))
+    if (id === editingExpenseId) {
+      resetExpenseForm()
+    }
   }
 
   const toggleSettled = (id) => {
@@ -310,6 +445,15 @@ function MoneyTrackerPage() {
         </p>
       )}
 
+      {dueRecurring.length > 0 && (
+        <RecurringConfirmPrompt
+          due={dueRecurring}
+          month={selectedMonth}
+          onConfirm={confirmRecurring}
+          onSkip={skipRecurring}
+        />
+      )}
+
       <article className="money-budget-card no-print">
         <form className="money-budget-form" onSubmit={saveBudget}>
           <label htmlFor="money_budget_input">Money you have for {formatMonthLabel(selectedMonth)}</label>
@@ -329,8 +473,12 @@ function MoneyTrackerPage() {
         </form>
       </article>
 
+      <RecurringExpensesCard recurringExpenses={recurringExpenses} onAdd={addRecurring} onRemove={removeRecurring} />
+
+      <BucketsCard buckets={bucketSummaries} onAdd={addBucket} onRemove={removeBucket} onUpdate={updateBucket} />
+
       <article className="money-add-card no-print">
-        <h3>Add an expense</h3>
+        <h3>{editingExpenseId !== null ? 'Edit expense' : 'Add an expense'}</h3>
         {shareBanner && (
           <p className="money-share-banner no-print">
             Filled in from what you shared: "{shareBanner}". Double-check the amount and place, then tap Add.
@@ -339,6 +487,7 @@ function MoneyTrackerPage() {
             </button>
           </p>
         )}
+        {editingExpenseId === null && <QuickTemplateChips templates={quickTemplates} onPick={applyTemplate} />}
         <form className="money-add-form" onSubmit={addExpense}>
           <input
             type="date"
@@ -346,7 +495,7 @@ function MoneyTrackerPage() {
             onChange={(event) => updateForm('date', event.target.value)}
             required
           />
-          <select value={form.category} onChange={(event) => updateForm('category', event.target.value)}>
+          <select value={form.category} onChange={(event) => updateCategory(event.target.value)}>
             {CATEGORIES.map((category) => (
               <option key={category.value} value={category.value}>
                 {category.label}
@@ -357,7 +506,7 @@ function MoneyTrackerPage() {
             type="text"
             placeholder="Place (e.g. groceries)"
             value={form.place}
-            onChange={(event) => updateForm('place', event.target.value)}
+            onChange={(event) => updatePlace(event.target.value)}
           />
           <input
             type="text"
@@ -373,6 +522,14 @@ function MoneyTrackerPage() {
             value={form.amount}
             onChange={(event) => updateForm('amount', event.target.value)}
           />
+          <select value={form.bucketId} onChange={(event) => updateForm('bucketId', event.target.value)}>
+            <option value="">No bucket</option>
+            {buckets.map((bucket) => (
+              <option key={bucket.id} value={bucket.id}>
+                {bucket.name}
+              </option>
+            ))}
+          </select>
           <SplitExpenseFields
             amount={form.amount}
             isSplit={form.isSplit}
@@ -380,14 +537,21 @@ function MoneyTrackerPage() {
             splitWith={form.splitWith}
             onChangeSplitWith={(value) => updateForm('splitWith', value)}
           />
-          <button type="submit">Add</button>
+          <div className="money-add-form-actions">
+            <button type="submit">{editingExpenseId !== null ? 'Save changes' : 'Add'}</button>
+            {editingExpenseId !== null && (
+              <button type="button" className="secondary-btn" onClick={cancelEditExpense}>
+                Cancel
+              </button>
+            )}
+          </div>
         </form>
         {formError && <p className="money-form-error">{formError}</p>}
       </article>
 
       <article className="money-chart-card">
         <div className="money-chart-card-head">
-          <h3>Spending by category</h3>
+          <h3>{activeChartView === 'category' ? 'Spending by category' : 'Daily usage'}</h3>
           <button
             type="button"
             className="secondary-btn no-print"
@@ -400,7 +564,31 @@ function MoneyTrackerPage() {
             Download PDF
           </button>
         </div>
-        <CategoryBreakdownChart items={categoryBreakdown} total={totalSpent} />
+        <div className="brief-mode-toggle no-print" role="tablist" aria-label="Chart view">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeChartView === 'category'}
+            className={activeChartView === 'category' ? 'pill-btn active' : 'pill-btn'}
+            onClick={() => setActiveChartView('category')}
+          >
+            By Category
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeChartView === 'daily'}
+            className={activeChartView === 'daily' ? 'pill-btn active' : 'pill-btn'}
+            onClick={() => setActiveChartView('daily')}
+          >
+            Daily Usage
+          </button>
+        </div>
+        {activeChartView === 'category' ? (
+          <CategoryBreakdownChart items={categoryBreakdown} total={totalSpent} />
+        ) : (
+          <DailyUsageChart items={dailyBreakdown} />
+        )}
       </article>
 
       <article className="money-table-card">
@@ -429,7 +617,12 @@ function MoneyTrackerPage() {
                 <tr key={expense.id}>
                   <td>{expense.date}</td>
                   <td>{CATEGORY_MAP[expense.category]?.label || expense.category}</td>
-                  <td>{expense.place || '-'}</td>
+                  <td>
+                    {expense.place || '-'}
+                    {expense.bucketId && bucketMap.get(expense.bucketId) && (
+                      <span className="money-bucket-badge">{bucketMap.get(expense.bucketId)}</span>
+                    )}
+                  </td>
                   <td>{expense.note || '-'}</td>
                   <td>{asCurrency(expense.amount)}</td>
                   <td>
@@ -462,6 +655,9 @@ function MoneyTrackerPage() {
                     )}
                   </td>
                   <td className="no-print">
+                    <button type="button" className="secondary-btn" onClick={() => startEditExpense(expense)}>
+                      Edit
+                    </button>
                     <button
                       type="button"
                       className="secondary-btn danger-btn"
