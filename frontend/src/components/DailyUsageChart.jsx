@@ -4,6 +4,7 @@ const PAD_LEFT = 40
 const PAD = 24
 const Y_TICKS = 4
 const LABEL_STEP = 5
+const BAR_GAP = 2
 
 const compactCurrency = (value) =>
   new Intl.NumberFormat('en-IN', { notation: 'compact', maximumFractionDigits: 1 }).format(value)
@@ -16,7 +17,7 @@ const asCurrency = (value) =>
     maximumFractionDigits: 0,
   }).format(value)
 
-function DailyUsageChart({ items }) {
+function DailyUsageChart({ items, total }) {
   const max = Math.max(...items.map((item) => item.amount), 0)
 
   if (max <= 0) {
@@ -25,20 +26,27 @@ function DailyUsageChart({ items }) {
 
   const innerWidth = WIDTH - PAD_LEFT - PAD
   const innerHeight = HEIGHT - PAD * 2
-  const stepX = items.length > 1 ? innerWidth / (items.length - 1) : 0
-  const points = items.map((item, i) => ({
+  const barWidth = innerWidth / items.length
+  const bars = items.map((item, i) => ({
     ...item,
-    x: PAD_LEFT + i * stepX,
-    y: PAD + innerHeight - (item.amount / max) * innerHeight,
+    x: PAD_LEFT + i * barWidth,
+    barHeight: (item.amount / max) * innerHeight,
   }))
-  const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' ')
   const yTicks = Array.from({ length: Y_TICKS + 1 }, (_, i) => {
     const value = (max / Y_TICKS) * i
     return { value, y: PAD + innerHeight - (value / max) * innerHeight }
   })
+  const highestDay = bars.reduce((best, bar) => (bar.amount > best.amount ? bar : best), bars[0])
 
   return (
-    <div className="money-chart">
+    <>
+      {typeof total === 'number' && (
+        <p className="money-daily-total">
+          Total this month: <strong>{asCurrency(total)}</strong> · highest day was{' '}
+          <strong>day {highestDay.day}</strong> at {asCurrency(highestDay.amount)}
+        </p>
+      )}
+      <div className="money-chart">
       <svg viewBox={`0 0 ${WIDTH} ${HEIGHT}`} width={WIDTH} height={HEIGHT} role="img" aria-label="Daily spending this month">
         {yTicks.map((tick) => (
           <g key={tick.value}>
@@ -48,21 +56,29 @@ function DailyUsageChart({ items }) {
             </text>
           </g>
         ))}
-        <path d={linePath} fill="none" stroke="#4a7c59" strokeWidth={2} />
-        {points.map((p) => (
-          <circle key={p.date} cx={p.x} cy={p.y} r={p.amount > 0 ? 3 : 2} fill="#4a7c59" className="money-donut-slice">
-            <title>{`Day ${p.day}: ${asCurrency(p.amount)}`}</title>
-          </circle>
+        {bars.map((bar) => (
+          <rect
+            key={bar.date}
+            x={bar.x + BAR_GAP / 2}
+            y={PAD + innerHeight - bar.barHeight}
+            width={Math.max(barWidth - BAR_GAP, 1)}
+            height={Math.max(bar.barHeight, bar.amount > 0 ? 2 : 0)}
+            fill={bar.day === highestDay.day ? '#2f6b3f' : '#4a7c59'}
+            rx={1}
+          >
+            <title>{`Day ${bar.day}: ${asCurrency(bar.amount)}`}</title>
+          </rect>
         ))}
-        {points
-          .filter((p) => p.day === 1 || p.day % LABEL_STEP === 0)
-          .map((p) => (
-            <text key={p.date} x={p.x} y={HEIGHT - 4} fontSize="9" textAnchor="middle" fill="#7a7869">
-              {p.day}
+        {bars
+          .filter((bar) => bar.day === 1 || bar.day % LABEL_STEP === 0)
+          .map((bar) => (
+            <text key={bar.date} x={bar.x + barWidth / 2} y={HEIGHT - 4} fontSize="9" textAnchor="middle" fill="#7a7869">
+              {bar.day}
             </text>
           ))}
       </svg>
-    </div>
+      </div>
+    </>
   )
 }
 

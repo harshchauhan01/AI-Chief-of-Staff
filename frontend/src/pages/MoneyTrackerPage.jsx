@@ -587,7 +587,7 @@ function MoneyTrackerPage() {
         {activeChartView === 'category' ? (
           <CategoryBreakdownChart items={categoryBreakdown} total={totalSpent} />
         ) : (
-          <DailyUsageChart items={dailyBreakdown} />
+          <DailyUsageChart items={dailyBreakdown} total={totalSpent} />
         )}
       </article>
 

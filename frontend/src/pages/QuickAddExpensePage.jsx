@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import SplitExpenseFields from '../components/SplitExpenseFields'
 import { CATEGORIES } from '../constants/moneyCategories'
 import { asCurrency, todayIso, toNumber } from '../utils/money'
-import { addExpenseToStore } from '../utils/moneyStore'
+import { addExpenseToStore, loadMoneyState } from '../utils/moneyStore'
 import { parseSharedExpenseText } from '../utils/parseSharedExpense'
 import { computeShareAmount } from '../utils/splitShare'
 
@@ -15,13 +15,15 @@ const initialForm = () => ({
   amount: '',
   isSplit: false,
   splitWith: [],
+  bucketId: '',
 })
 
 // One question per screen, in this order — amount first so a fast tap from
 // the notification asks the one thing you always know before anything else.
-const STEPS = ['amount', 'category', 'place', 'split', 'note', 'date']
+const STEPS = ['amount', 'category', 'place', 'bucket', 'split', 'note', 'date']
 
 function QuickAddExpensePage() {
+  const [buckets] = useState(() => loadMoneyState().buckets)
   const [form, setForm] = useState(initialForm)
   const [pasteText, setPasteText] = useState('')
   const [statusMessage, setStatusMessage] = useState('')
@@ -125,6 +127,7 @@ function QuickAddExpensePage() {
       isSplit: form.isSplit,
       splitWith: form.isSplit ? form.splitWith : [],
       shareAmount: computeShareAmount(amount, form.isSplit, form.splitWith),
+      bucketId: form.bucketId ? Number(form.bucketId) : null,
       settled: false,
     })
 
@@ -271,6 +274,26 @@ function QuickAddExpensePage() {
                     onChange={(event) => updateForm('place', event.target.value)}
                     onKeyDown={handleEnterKey}
                   />
+                </div>
+              )}
+
+              {currentStep === 'bucket' && (
+                <div className="quick-add-step">
+                  <h2>Add to a bucket?</h2>
+                  <select
+                    id="quick_add_bucket"
+                    autoFocus
+                    value={form.bucketId}
+                    onChange={(event) => updateForm('bucketId', event.target.value)}
+                    onKeyDown={handleEnterKey}
+                  >
+                    <option value="">No bucket</option>
+                    {buckets.map((bucket) => (
+                      <option key={bucket.id} value={bucket.id}>
+                        {bucket.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               )}
 

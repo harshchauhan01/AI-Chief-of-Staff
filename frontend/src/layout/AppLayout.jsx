@@ -476,6 +476,9 @@ function AppLayout() {
           <Outlet context={settingsContext} />
         </main>
       </div>
+      <Link to="/quick-add" className="fab-add-expense" aria-label="Add expense" title="Add expense">
+        +
+      </Link>
     </>
   )
 }
